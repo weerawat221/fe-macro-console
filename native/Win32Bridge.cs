@@ -1,0 +1,429 @@
+using System;
+using System.IO;
+using System.Text;
+using System.Runtime.InteropServices;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
+
+namespace Win32Bridge {
+    class Program {
+        [DllImport("user32.dll")]
+        static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern int GetWindowTextLength(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool IsWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool IsWindowVisible(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool IsIconic(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        static extern IntPtr SetFocus(IntPtr hWnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern uint SendInput(uint nInputs, [MarshalAs(UnmanagedType.LPArray), In] INPUT[] pInputs, int cbSize);
+
+        [DllImport("kernel32.dll")]
+        static extern uint GetCurrentThreadId();
+
+        [DllImport("user32.dll")]
+        static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+        [DllImport("user32.dll")]
+        static extern bool BringWindowToTop(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+
+        [DllImport("user32.dll")]
+        static extern bool AllowSetForegroundWindow(int dwProcessId);
+
+        const int SW_SHOW = 5;
+        const int SW_RESTORE = 9;
+        const uint INPUT_KEYBOARD = 1;
+        const uint KEYEVENTF_KEYUP = 0x0002;
+        const uint KEYEVENTF_UNICODE = 0x0004;
+        const byte VK_MENU = 0x12;
+        const ushort VK_RETURN = 0x0D;
+        const ushort VK_TAB = 0x09;
+        const int ASFW_ANY = -1;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MOUSEINPUT {
+            public int dx;
+            public int dy;
+            public uint mouseData;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct KEYBDINPUT {
+            public ushort wVk;
+            public ushort wScan;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct HARDWAREINPUT {
+            public uint uMsg;
+            public ushort wParamL;
+            public ushort wParamH;
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        public struct INPUT {
+            [FieldOffset(0)]
+            public uint type;
+            [FieldOffset(8)]
+            public MOUSEINPUT mi;
+            [FieldOffset(8)]
+            public KEYBDINPUT ki;
+            [FieldOffset(8)]
+            public HARDWAREINPUT hi;
+        }
+
+        static readonly int InputSize = Marshal.SizeOf(typeof(INPUT));
+
+        static bool RobustFocusWindow(IntPtr hWnd) {
+            if (!IsWindow(hWnd)) return false;
+
+            try {
+                AllowSetForegroundWindow(ASFW_ANY);
+
+                if (IsIconic(hWnd)) {
+                    ShowWindow(hWnd, SW_RESTORE);
+                } else {
+                    ShowWindow(hWnd, SW_SHOW);
+                }
+                BringWindowToTop(hWnd);
+
+                IntPtr fgHwnd = GetForegroundWindow();
+                if (fgHwnd != hWnd) {
+                    uint curThread = GetCurrentThreadId();
+                    uint dummy;
+                    uint fgThread = fgHwnd != IntPtr.Zero ? GetWindowThreadProcessId(fgHwnd, out dummy) : 0;
+                    uint targetThread = GetWindowThreadProcessId(hWnd, out dummy);
+
+                    if (fgThread != 0 && fgThread != curThread) {
+                        AttachThreadInput(curThread, fgThread, true);
+                    }
+                    if (targetThread != 0 && targetThread != curThread) {
+                        AttachThreadInput(curThread, targetThread, true);
+                    }
+
+                    // Alt pulse to reset foreground lock timeout
+                    keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
+                    keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+
+                    SetForegroundWindow(hWnd);
+                    SetFocus(hWnd);
+
+                    if (fgThread != 0 && fgThread != curThread) {
+                        AttachThreadInput(curThread, fgThread, false);
+                    }
+                    if (targetThread != 0 && targetThread != curThread) {
+                        AttachThreadInput(curThread, targetThread, false);
+                    }
+                } else {
+                    SetForegroundWindow(hWnd);
+                }
+
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        static void SendStringAtomic(string text) {
+            if (string.IsNullOrEmpty(text)) return;
+
+            // Split into text segments if there are Enter or Tab characters
+            // So text is sent in one atomic batch, then Enter is sent
+            List<INPUT> batch = new List<INPUT>();
+
+            for (int i = 0; i < text.Length; i++) {
+                char c = text[i];
+                if (c == '\r') continue;
+
+                if (c == '\n') {
+                    // Flush existing batch
+                    if (batch.Count > 0) {
+                        SendInput((uint)batch.Count, batch.ToArray(), InputSize);
+                        batch.Clear();
+                        Thread.Sleep(35); // Commit delay for IME/Unicode in chat apps
+                    }
+
+                    // Send Enter
+                    INPUT[] enter = new INPUT[2];
+                    enter[0].type = INPUT_KEYBOARD;
+                    enter[0].ki.wVk = VK_RETURN;
+                    enter[0].ki.dwFlags = 0;
+
+                    enter[1].type = INPUT_KEYBOARD;
+                    enter[1].ki.wVk = VK_RETURN;
+                    enter[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+                    SendInput(2, enter, InputSize);
+                    Thread.Sleep(20);
+                }
+                else if (c == '\t') {
+                    // Flush existing batch
+                    if (batch.Count > 0) {
+                        SendInput((uint)batch.Count, batch.ToArray(), InputSize);
+                        batch.Clear();
+                        Thread.Sleep(20);
+                    }
+
+                    // Send Tab
+                    INPUT[] tab = new INPUT[2];
+                    tab[0].type = INPUT_KEYBOARD;
+                    tab[0].ki.wVk = VK_TAB;
+                    tab[0].ki.dwFlags = 0;
+
+                    tab[1].type = INPUT_KEYBOARD;
+                    tab[1].ki.wVk = VK_TAB;
+                    tab[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+                    SendInput(2, tab, InputSize);
+                    Thread.Sleep(20);
+                }
+                else {
+                    // Unicode char
+                    INPUT down = new INPUT();
+                    down.type = INPUT_KEYBOARD;
+                    down.ki.wVk = 0;
+                    down.ki.wScan = (ushort)c;
+                    down.ki.dwFlags = KEYEVENTF_UNICODE;
+
+                    INPUT up = new INPUT();
+                    up.type = INPUT_KEYBOARD;
+                    up.ki.wVk = 0;
+                    up.ki.wScan = (ushort)c;
+                    up.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+
+                    batch.Add(down);
+                    batch.Add(up);
+                }
+            }
+
+            // Flush any remaining characters in one atomic batch
+            if (batch.Count > 0) {
+                SendInput((uint)batch.Count, batch.ToArray(), InputSize);
+            }
+        }
+
+        static string EscapeJson(string s) {
+            if (s == null) return "";
+            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t");
+        }
+
+        delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        static IntPtr FindWindowByQueries(string[] queries) {
+            if (queries == null || queries.Length == 0) return IntPtr.Zero;
+            List<string> cleanQueries = new List<string>();
+            foreach (string q in queries) {
+                if (!string.IsNullOrEmpty(q)) cleanQueries.Add(q.Trim().ToUpper());
+            }
+            if (cleanQueries.Count == 0) return IntPtr.Zero;
+
+            IntPtr bestMatch = IntPtr.Zero;
+
+            EnumWindows(delegate(IntPtr hWnd, IntPtr lParam) {
+                if (!IsWindow(hWnd)) return true;
+
+                bool isVis = IsWindowVisible(hWnd) || IsIconic(hWnd);
+                if (!isVis) return true;
+
+                int len = GetWindowTextLength(hWnd);
+                if (len <= 0) return true;
+
+                StringBuilder sb = new StringBuilder(len + 1);
+                GetWindowText(hWnd, sb, len + 1);
+                string title = sb.ToString().ToUpper();
+
+                if (title.Contains("FE MACRO CONSOLE")) return true;
+
+                uint pid;
+                GetWindowThreadProcessId(hWnd, out pid);
+                string procName = "";
+                try {
+                    procName = Process.GetProcessById((int)pid).ProcessName.ToUpper();
+                } catch {}
+
+                if (procName == "ELECTRON" || procName == "NODE") return true;
+
+                foreach (string q in cleanQueries) {
+                    string cleanQ = q.Replace(".EXE", "");
+                    if (procName == cleanQ || procName == q) {
+                        bestMatch = hWnd;
+                        return false;
+                    }
+                    if (title.Contains(cleanQ)) {
+                        if (bestMatch == IntPtr.Zero) bestMatch = hWnd;
+                    }
+                }
+                return true;
+            }, IntPtr.Zero);
+
+            return bestMatch;
+        }
+
+        static void Main(string[] args) {
+            Console.OutputEncoding = Encoding.UTF8;
+            Console.InputEncoding = Encoding.UTF8;
+
+            string line;
+            while ((line = Console.ReadLine()) != null) {
+                line = line.Trim();
+                if (line == "exit" || line == "quit") break;
+                if (string.IsNullOrEmpty(line)) continue;
+
+                try {
+                    string[] parts = line.Split(new char[] { '|' });
+                    string cmd = parts[0];
+
+                    if (cmd == "GET_FOREGROUND") {
+                        IntPtr hwnd = GetForegroundWindow();
+                        if (hwnd == IntPtr.Zero) {
+                            Console.WriteLine("{\"ok\":true,\"hwnd\":0,\"title\":\"\",\"processName\":\"\"}");
+                            continue;
+                        }
+
+                        int len = GetWindowTextLength(hwnd);
+                        StringBuilder sb = new StringBuilder(len + 1);
+                        if (len > 0) GetWindowText(hwnd, sb, len + 1);
+                        string title = sb.ToString();
+
+                        uint pid;
+                        GetWindowThreadProcessId(hwnd, out pid);
+                        string procName = "";
+                        try {
+                            procName = Process.GetProcessById((int)pid).ProcessName;
+                        } catch {}
+
+                        Console.WriteLine(string.Format("{{\"ok\":true,\"hwnd\":{0},\"title\":\"{1}\",\"processName\":\"{2}\",\"pid\":{3}}}",
+                            hwnd.ToInt64(), EscapeJson(title), EscapeJson(procName), pid));
+                    }
+                    else if (cmd == "FOCUS_HWND") {
+                        long hwndVal = long.Parse(parts[1]);
+                        IntPtr hwnd = new IntPtr(hwndVal);
+                        bool ok = RobustFocusWindow(hwnd);
+                        Console.WriteLine(string.Format("{{\"ok\":{0}}}", ok ? "true" : "false"));
+                    }
+                    else if (cmd == "FOCUS_QUERY") {
+                        string[] queries = new string[parts.Length - 1];
+                        Array.Copy(parts, 1, queries, 0, parts.Length - 1);
+
+                        IntPtr hwnd = FindWindowByQueries(queries);
+                        if (hwnd != IntPtr.Zero) {
+                            RobustFocusWindow(hwnd);
+                            Console.WriteLine(string.Format("{{\"ok\":true,\"hwnd\":{0}}}", hwnd.ToInt64()));
+                        } else {
+                            Console.WriteLine("{\"ok\":false,\"reason\":\"Window not found\"}");
+                        }
+                    }
+                    else if (cmd == "FOCUS_AND_SEND_B64") {
+                        long hwndVal = long.Parse(parts[1]);
+                        string b64 = parts[2];
+                        IntPtr hwnd = IntPtr.Zero;
+
+                        if (hwndVal != 0 && IsWindow(new IntPtr(hwndVal))) {
+                            hwnd = new IntPtr(hwndVal);
+                        }
+
+                        if (hwnd == IntPtr.Zero && parts.Length > 3) {
+                            string[] queries = new string[parts.Length - 3];
+                            Array.Copy(parts, 3, queries, 0, parts.Length - 3);
+                            hwnd = FindWindowByQueries(queries);
+                        }
+
+                        if (hwnd != IntPtr.Zero) {
+                            RobustFocusWindow(hwnd);
+                            Thread.Sleep(120);
+                        }
+
+                        byte[] bytes = Convert.FromBase64String(b64);
+                        string text = Encoding.UTF8.GetString(bytes);
+                        SendStringAtomic(text);
+
+                        Console.WriteLine(string.Format("{{\"ok\":true,\"hwnd\":{0}}}", hwnd.ToInt64()));
+                    }
+                    else if (cmd == "SEND_B64") {
+                        string b64 = parts.Length > 1 ? parts[1] : "";
+                        byte[] bytes = Convert.FromBase64String(b64);
+                        string text = Encoding.UTF8.GetString(bytes);
+                        SendStringAtomic(text);
+                        Console.WriteLine("{\"ok\":true}");
+                    }
+                    else if (cmd == "IS_WINDOW") {
+                        long hwndVal = long.Parse(parts[1]);
+                        IntPtr hwnd = new IntPtr(hwndVal);
+                        bool ok = IsWindow(hwnd);
+                        Console.WriteLine(string.Format("{{\"ok\":true,\"valid\":{0}}}", ok ? "true" : "false"));
+                    }
+                    else if (cmd == "LIST_WINDOWS") {
+                        List<string> list = new List<string>();
+                        EnumWindows(delegate(IntPtr hWnd, IntPtr lParam) {
+                            if (IsWindowVisible(hWnd) || IsIconic(hWnd)) {
+                                int len = GetWindowTextLength(hWnd);
+                                if (len > 0) {
+                                    StringBuilder sb = new StringBuilder(len + 1);
+                                    GetWindowText(hWnd, sb, len + 1);
+                                    string title = sb.ToString();
+                                    if (!string.IsNullOrWhiteSpace(title) && title != "Program Manager") {
+                                        uint pid;
+                                        GetWindowThreadProcessId(hWnd, out pid);
+                                        string pName = "";
+                                        try {
+                                            pName = Process.GetProcessById((int)pid).ProcessName;
+                                        } catch {}
+                                        list.Add(string.Format("{{\"hwnd\":{0},\"title\":\"{1}\",\"processName\":\"{2}\",\"pid\":{3}}}",
+                                            hWnd.ToInt64(), EscapeJson(title), EscapeJson(pName), pid));
+                                    }
+                                }
+                            }
+                            return true;
+                        }, IntPtr.Zero);
+                        Console.WriteLine("[" + string.Join(",", list.ToArray()) + "]");
+                    }
+                    else {
+                        Console.WriteLine("{\"ok\":false,\"reason\":\"Unknown command\"}");
+                    }
+                } catch (Exception ex) {
+                    Console.WriteLine(string.Format("{{\"ok\":false,\"error\":\"{0}\"}}", EscapeJson(ex.Message)));
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,49 @@
+{
+  "name": "fe-macro-console",
+  "version": "13.0.0",
+  "description": "Field Engineer Macro Console — Electron rebuild with custom command editor",
+  "main": "src/main/main.js",
+  "author": "",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "rebuild:native": "npm install --prefix native/sendinput_win32 && electron-rebuild -f -w sendinput-win32",
+    "build:win": "npm run rebuild:native && electron-builder --win --x64",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "sendinput-win32": "file:native/sendinput_win32"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.6.1",
+    "electron": "^43.1.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.fieldops.macroconsole",
+    "productName": "FE Macro Console",
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json",
+      "node_modules/**/*",
+      "!node_modules/**/*.{md,map,ts}",
+      "!node_modules/.bin",
+      "!native/sendinput_win32/build/Release/obj*",
+      "!**/*.{iobj,ipdb,pdb,lib}"
+    ]
+  }
+}

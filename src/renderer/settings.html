@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FE Macro Console — Setting</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="settings-window-body">
+  <div class="settings-window-container">
+
+    <!-- ============ SETTINGS HEADER ============ -->
+    <header class="settings-header">
+      <div class="editor-header-left">
+        <h1 class="settings-window-title">Setting</h1>
+        <!-- Top navbar: Command Sets vs Valuable vs View -->
+        <nav class="editor-top-nav" role="tablist">
+          <button id="tabNavApps" class="editor-top-tab editor-top-tab--active" role="tab" aria-selected="true">Command
+            Sets (Apps)</button>
+          <button id="tabNavVariables" class="editor-top-tab" role="tab" aria-selected="false">Valuable</button>
+          <button id="tabNavView" class="editor-top-tab" role="tab" aria-selected="false">View</button>
+        </nav>
+      </div>
+      <div class="editor-header-right">
+        <!-- Export: arrow-up-to-line -->
+        <button id="btnExportConfig" class="btn btn--ghost btn--icon" title="Export All Settings">
+          <svg class="btn-icon-svg" viewBox="0 0 384 512" width="13" height="13" fill="currentColor">
+            <path
+              d="M214.6 153.4c-12.5-12.5-32.8-12.5-45.3 0l-128 128c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 253.3V448c0 17.7 14.3 32 32 32s32-14.3 32-32V253.3l73.4 73.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-128-128zM352 64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32C14.3 0 0 14.3 0 32s14.3 32 32 32h320z" />
+          </svg>
+        </button>
+        <!-- Import: arrow-down-to-line -->
+        <button id="btnImportConfig" class="btn btn--ghost btn--icon" title="Import Settings">
+          <svg class="btn-icon-svg" viewBox="0 0 384 512" width="13" height="13" fill="currentColor">
+            <path
+              d="M169.4 358.6c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 258.7V64c0-17.7-14.3-32-32-32s-32 14.3-32 32v194.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128zM32 448c-17.7 0-32 14.3-32 32s14.3 32 32 32h320c17.7 0 32-14.3 32-32s-14.3-32-32-32H32z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Error / Status Toast -->
+    <div id="settingsToast" class="settings-toast" role="alert"></div>
+
+    <!-- ============ MAIN CONTENT TABS ============ -->
+    <div class="settings-content-area">
+
+      <!-- PAGE 1: COMMAND SETS (APPS) -->
+      <div id="editorViewApps" class="editor-body">
+        <nav class="editor-nav">
+          <div class="editor-nav-label">Command sets (Apps)</div>
+          <div id="editorModeList" class="editor-mode-list"></div>
+          <button id="btnAddMode" class="btn btn--ghost btn--sm editor-add-mode">+ New set</button>
+        </nav>
+
+        <div class="editor-main">
+          <!-- Target Programs / Processes Bar -->
+          <div class="editor-procs-bar" id="editorProcsBar">
+            <div class="editor-procs-label">Programs:</div>
+            <div class="editor-procs-list" id="editorProcsList"></div>
+            <button id="btnAddProcToSet" class="btn btn--ghost btn--xs"
+              title="Add running program to this command set">+ Add Program</button>
+          </div>
+
+          <!-- Submode bar in editor -->
+          <div class="editor-submode-bar" id="editorSubmodeBar">
+            <div class="editor-submode-label">Sub-modes:</div>
+            <div class="editor-submode-list" id="editorSubmodeList"></div>
+            <button id="btnAddSubmode" class="btn btn--ghost btn--xs" title="Add sub-macro set">+ Sub-mode</button>
+          </div>
+
+          <div class="editor-main-header">
+            <input id="editorGroupTitle" class="editor-group-title-input"
+              placeholder="Group name (e.g. AP Monitoring)" />
+            <button id="btnAddGroup" class="btn btn--ghost btn--sm">+ Group</button>
+          </div>
+          <div id="editorGroups" class="editor-groups"></div>
+        </div>
+      </div>
+
+      <!-- PAGE 2: VALUABLE (VARIABLES) MANAGER -->
+      <div id="editorViewVariables" class="editor-body editor-body--column" style="display:none;">
+        <div class="var-manager-header">
+          <div class="var-manager-info">
+            <span class="var-manager-title">Valuable (Variables &amp; Tokens)</span>
+            <span class="var-manager-desc">Manage all variable tokens used for text input fields and macro command
+              templates.</span>
+          </div>
+          <div class="var-manager-actions">
+            <input id="varSearchInput" class="form-input var-search-input" placeholder="Search variables…" />
+            <button id="btnAddVariable" class="btn btn--primary btn--sm">+ Add Variable</button>
+          </div>
+        </div>
+        <div class="var-list-container" id="varListContainer"></div>
+      </div>
+
+      <!-- PAGE 3: VIEW / THEMES / FONT SIZE -->
+      <div id="editorViewTheme" class="editor-body editor-body--column" style="display:none;">
+        <div class="view-settings-container">
+
+          <!-- Theme Presets -->
+          <div class="view-section">
+            <div class="view-section-header view-section-header--split">
+              <div class="view-section-header-info">
+                <span class="view-section-title">Color Theme Preset</span>
+                <span class="view-section-desc">Select a visual theme for the macro console and setting window.</span>
+              </div>
+              <button id="btnAddCustomTheme" class="btn btn--primary btn--xs" title="Create Custom Theme">+ Add Theme</button>
+            </div>
+            <div class="theme-preset-grid" id="themePresetGrid"></div>
+          </div>
+
+          <!-- Typography & Font Sizes -->
+          <div class="view-section">
+            <div class="view-section-header">
+              <span class="view-section-title">Font Size &amp; Typography</span>
+              <span class="view-section-desc">Customize text size and monospace fonts for buttons and inputs.</span>
+            </div>
+            <div class="typography-grid">
+
+              <div class="typography-item">
+                <div class="slider-label-row">
+                  <label class="form-label" for="sliderCmdFontSize">Macro Button Font Size</label>
+                  <span id="valCmdFontSize" class="slider-val-badge">11px</span>
+                </div>
+                <input type="range" id="sliderCmdFontSize" class="form-slider" min="8" max="25" step="0.5" value="11" />
+              </div>
+
+              <div class="typography-item">
+                <div class="slider-label-row">
+                  <label class="form-label" for="sliderInputFontSize">Input Fields Font Size</label>
+                  <span id="valInputFontSize" class="slider-val-badge">11px</span>
+                </div>
+                <input type="range" id="sliderInputFontSize" class="form-slider" min="8" max="25" step="0.5"
+                  value="11" />
+              </div>
+
+              <div class="typography-item">
+                <label class="form-label" for="selFontFamily">Monospace Font Family</label>
+                <select id="selFontFamily" class="form-select">
+                  <option value="'JetBrains Mono', 'Consolas', monospace" selected>JetBrains Mono / Consolas</option>
+                  <option value="'Cascadia Code', 'Consolas', monospace">Cascadia Code</option>
+                  <option value="'Fira Code', 'Consolas', monospace">Fira Code</option>
+                  <option value="'Courier New', monospace">Courier New</option>
+                </select>
+              </div>
+
+              <div class="typography-item">
+                <label class="form-label" for="selDensity">Layout Spacing Density</label>
+                <select id="selDensity" class="form-select">
+                  <option value="compact">Compact (Dense)</option>
+                  <option value="normal" selected>Normal (Balanced)</option>
+                  <option value="comfortable">Comfortable (Spacious)</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ============ IMPORT CONFLICT RESOLUTION MODAL ============ -->
+  <div id="importConflictModal" class="modal-overlay modal-overlay--hidden">
+    <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="conflictModalTitle">
+      <div class="modal-header">
+        <h2 id="conflictModalTitle">Import Duplicate Items Detected</h2>
+      </div>
+      <div class="form-body">
+        <div class="conflict-header-msg">
+          The imported file contains Command Sets or Valuable variables that already exist in your settings.
+          Choose how you would like to resolve each duplicate:
+        </div>
+        <div class="conflict-quick-bar">
+          <span>Set all to:</span>
+          <button id="btnConflictAllOverwrite" class="btn btn--ghost btn--xs">Overwrite All</button>
+          <button id="btnConflictAllKeepBoth" class="btn btn--ghost btn--xs">Keep Both All (Rename)</button>
+          <button id="btnConflictAllSkip" class="btn btn--ghost btn--xs">Keep Existing All</button>
+        </div>
+        <div id="conflictItemsList" class="conflict-items-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="conflictCancel" class="btn btn--ghost">Cancel Import</button>
+        <button id="conflictConfirm" class="btn btn--primary">Apply &amp; Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ADD/EDIT VARIABLE MODAL ============ -->
+  <div id="varFormModal" class="modal-overlay modal-overlay--hidden">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="varFormTitle">
+      <div class="modal-header">
+        <h2 id="varFormTitle">Variable</h2>
+      </div>
+      <div class="form-body">
+        <label class="form-label" for="vfKey">Variable Token Key (e.g. router_ip or device_sn)</label>
+        <input id="vfKey" class="form-input" placeholder="e.g. device_serial or router_ip" />
+        <span class="form-help">Used in templates as {key}. Letters, numbers, and underscores only.</span>
+
+        <label class="form-label" for="vfLabel">Field Label</label>
+        <input id="vfLabel" class="form-input" placeholder="e.g. Device Serial or Router IP" />
+
+        <label class="form-label" for="vfDescription">Description / Placeholder</label>
+        <input id="vfDescription" class="form-input" placeholder="e.g. SN12345678" />
+      </div>
+      <div class="modal-footer modal-footer--split">
+        <button id="vfDelete" class="btn btn--danger-ghost">Delete</button>
+        <div class="modal-footer-right">
+          <button id="vfCancel" class="btn btn--ghost">Cancel</button>
+          <button id="vfSave" class="btn btn--primary">Save Variable</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ADD PROGRAM TO SET MODAL ============ -->
+  <div id="addProcModal" class="modal-overlay modal-overlay--hidden">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="addProcModalTitle">
+      <div class="modal-header">
+        <h2 id="addProcModalTitle">Add Program to Set</h2>
+      </div>
+      <div class="form-body">
+        <label class="form-label" for="addProcSelect">Select running program</label>
+        <select id="addProcSelect" class="form-select"></select>
+      </div>
+      <div class="modal-footer">
+        <button id="addProcCancel" class="btn btn--ghost">Cancel</button>
+        <button id="addProcConfirm" class="btn btn--primary">Add Program</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ NEW SUB-MODE MODAL ============ -->
+  <div id="newSubmodeModal" class="modal-overlay modal-overlay--hidden">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="newSubmodeModalTitle">
+      <div class="modal-header">
+        <h2 id="newSubmodeModalTitle">Add Sub-mode</h2>
+      </div>
+      <div class="form-body">
+        <label class="form-label" for="nsubName">Sub-mode name</label>
+        <input id="nsubName" class="form-input" placeholder="e.g. AP, ONU, SWITCH, ROUTER" />
+        <span class="form-help">Each sub-mode represents a separate menu bar (like AP / ONU in RDM).</span>
+      </div>
+      <div class="modal-footer">
+        <button id="nsubCancel" class="btn btn--ghost">Cancel</button>
+        <button id="nsubCreate" class="btn btn--primary">Add Sub-mode</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ NEW COMMAND SET MODAL ============ -->
+  <div id="newSetModal" class="modal-overlay modal-overlay--hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="newSetModalTitle">
+      <div class="modal-header">
+        <h2 id="newSetModalTitle">Add New Command Set</h2>
+      </div>
+      <div class="form-body">
+        <label class="form-label">Select target running programs (one or more)</label>
+        <div id="nsRunningAppsContainer" class="ns-running-apps-container"></div>
+
+        <label class="form-label" for="nsAppName">Display Name</label>
+        <input id="nsAppName" class="form-input" placeholder="e.g. My Multi-Terminal" />
+
+        <label class="form-label" for="nsSubmodes">Sub-macro sets (comma separated)</label>
+        <input id="nsSubmodes" class="form-input" placeholder="e.g. AP, ONU, SWITCH (or leave empty for Default)" />
+        <span class="form-help">Separate with commas to create multiple sub-modes (like in RDM).</span>
+      </div>
+      <div class="modal-footer">
+        <button id="nsCancel" class="btn btn--ghost">Cancel</button>
+        <button id="nsCreate" class="btn btn--primary">Add Command Set</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COMMAND ROW EDIT MODAL ============ -->
+  <div id="commandFormModal" class="modal-overlay modal-overlay--hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="commandFormTitle">
+      <div class="modal-header">
+        <h2 id="commandFormTitle">Command</h2>
+      </div>
+      <div class="form-body">
+        <label class="form-label" for="cfLabel">Button label</label>
+        <input id="cfLabel" class="form-input" placeholder="e.g. Check AP Status" />
+
+        <label class="form-label" for="cfTemplate">Command template</label>
+        <textarea id="cfTemplate" class="form-textarea" rows="6"
+          placeholder="display ap all | include {sr_ap}&#10;Use \n for Enter, \t for Tab. Wrap field names in { }."></textarea>
+
+        <div class="form-token-hint" id="cfTokenHint"></div>
+
+        <label class="form-checkbox">
+          <input type="checkbox" id="cfAutoFocus" checked />
+          Autofocus target window when clicked
+        </label>
+
+        <label class="form-checkbox">
+          <input type="checkbox" id="cfPopup" />
+          Show confirm-before-send review popup
+        </label>
+      </div>
+      <div class="modal-footer modal-footer--split">
+        <button id="cfDelete" class="btn btn--danger-ghost">Delete</button>
+        <div class="modal-footer-right">
+          <button id="cfCancel" class="btn btn--ghost">Cancel</button>
+          <button id="cfSave" class="btn btn--primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CUSTOM THEME CREATOR MODAL ============ -->
+  <div id="customThemeModal" class="modal-overlay modal-overlay--hidden">
+    <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="customThemeTitle">
+      <div class="modal-header">
+        <h2 id="customThemeTitle">Create Custom Theme</h2>
+      </div>
+      <div class="form-body">
+        <label class="form-label" for="ctThemeName">Theme Name</label>
+        <input id="ctThemeName" class="form-input" placeholder="e.g. Sunset Amber, Cyber Teal, Royal Gold" />
+
+        <div class="theme-creator-split">
+          <!-- Left: Color Targets (Signal, Background, Panel, Text) -->
+          <div class="theme-color-target-list">
+            <label class="form-label">Color Targets</label>
+            <div class="color-target-btn color-target-btn--active" id="btnTargetSignal" data-target="signal">
+              <span class="color-target-swatch" id="swatchSignal" style="background:#5eead4;"></span>
+              <div class="color-target-info">
+                <span class="color-target-name">Accent / Signal</span>
+                <span class="color-target-hex" id="hexLabelSignal">#5eead4</span>
+              </div>
+            </div>
+            <div class="color-target-btn" id="btnTargetBgBase" data-target="bgBase">
+              <span class="color-target-swatch" id="swatchBgBase" style="background:#0d0f14;"></span>
+              <div class="color-target-info">
+                <span class="color-target-name">Background</span>
+                <span class="color-target-hex" id="hexLabelBgBase">#0d0f14</span>
+              </div>
+            </div>
+            <div class="color-target-btn" id="btnTargetBgPanel" data-target="bgPanel">
+              <span class="color-target-swatch" id="swatchBgPanel" style="background:#12141c;"></span>
+              <div class="color-target-info">
+                <span class="color-target-name">Panel / Card</span>
+                <span class="color-target-hex" id="hexLabelBgPanel">#12141c</span>
+              </div>
+            </div>
+            <div class="color-target-btn" id="btnTargetText" data-target="text">
+              <span class="color-target-swatch" id="swatchText" style="background:#e2e4ea;"></span>
+              <div class="color-target-info">
+                <span class="color-target-name">Text Primary</span>
+                <span class="color-target-hex" id="hexLabelText">#e2e4ea</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Color Wheel & RGB Sliders -->
+          <div class="theme-color-editor-pane">
+            <div class="color-wheel-row">
+              <div class="wheel-picker-wrapper">
+                <label class="form-label" for="ctColorWheel">Color Wheel / Palette</label>
+                <div class="color-wheel-box">
+                  <input type="color" id="ctColorWheel" class="color-wheel-input" value="#5eead4" />
+                  <span class="color-wheel-hint">Click to open Color Wheel</span>
+                </div>
+              </div>
+              <div class="wheel-hex-wrapper">
+                <label class="form-label" for="ctHexInput">HEX Code</label>
+                <input type="text" id="ctHexInput" class="form-input ct-hex-input" value="#5eead4" maxlength="7" />
+              </div>
+            </div>
+
+            <div class="rgb-controls-group">
+              <label class="form-label">RGB Sliders (0 - 255)</label>
+
+              <div class="rgb-slider-row rgb-slider-row--red">
+                <span class="rgb-channel-label rgb-channel-label--r">R</span>
+                <input type="range" id="sliderR" class="form-slider rgb-slider" min="0" max="255" value="94" />
+                <input type="number" id="numR" class="form-input rgb-num-input" min="0" max="255" value="94" />
+              </div>
+
+              <div class="rgb-slider-row rgb-slider-row--green">
+                <span class="rgb-channel-label rgb-channel-label--g">G</span>
+                <input type="range" id="sliderG" class="form-slider rgb-slider" min="0" max="255" value="234" />
+                <input type="number" id="numG" class="form-input rgb-num-input" min="0" max="255" value="234" />
+              </div>
+
+              <div class="rgb-slider-row rgb-slider-row--blue">
+                <span class="rgb-channel-label rgb-channel-label--b">B</span>
+                <input type="range" id="sliderB" class="form-slider rgb-slider" min="0" max="255" value="212" />
+                <input type="number" id="numB" class="form-input rgb-num-input" min="0" max="255" value="212" />
+              </div>
+            </div>
+
+            <!-- Preview Swatch Card -->
+            <div class="ct-preview-card" id="ctPreviewCard">
+              <span class="ct-preview-badge" id="ctPreviewBadge">Active Theme Preview</span>
+              <span class="ct-preview-text" id="ctPreviewText">Preview Text Color &amp; Background</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="ctCancel" class="btn btn--ghost">Cancel</button>
+        <button id="ctSave" class="btn btn--primary">Save Custom Theme</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="settingsRenderer.js"></script>
+</body>
+</html>
