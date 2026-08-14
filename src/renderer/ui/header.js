@@ -14,6 +14,21 @@ let lastUserActivity = Date.now();
 const IDLE_THRESHOLD_MS = 180000; // 3 minutes
 
 export function initHeader() {
+  document.getElementById('btnOcrCapture')?.addEventListener('click', () => {
+    if (window.feMacro?.startOcrCapture) {
+      window.feMacro.startOcrCapture();
+    }
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.altKey && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+      e.preventDefault();
+      if (window.feMacro?.startOcrCapture) {
+        window.feMacro.startOcrCapture();
+      }
+    }
+  });
+
   document.getElementById('btnEditMode').addEventListener('click', () => {
     if (window.feMacro && window.feMacro.openSettings) {
       window.feMacro.openSettings();
@@ -22,15 +37,16 @@ export function initHeader() {
     }
   });
 
-  const toggleBtn = document.getElementById('btnToggleFields');
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-      fieldsVisible = !fieldsVisible;
-      const panel = document.getElementById('fieldPanel');
-      if (panel) {
-        panel.style.display = fieldsVisible ? 'grid' : 'none';
+  const filterBtn = document.getElementById('btnToggleFieldFilter');
+  if (filterBtn) {
+    updateFieldFilterButton();
+    filterBtn.addEventListener('click', () => {
+      setState({ showAllFields: !state.showAllFields });
+      updateFieldFilterButton();
+      if (window.feMacro?.storeSet) {
+        window.feMacro.storeSet('showAllFields', state.showAllFields);
       }
-      toggleBtn.textContent = fieldsVisible ? '▲' : '▼';
+      renderFieldPanel();
     });
   }
 
@@ -106,3 +122,18 @@ function updateFocusIndicator() {
     if (label) label.textContent = 'Waiting for target window…';
   }
 }
+
+export function updateFieldFilterButton() {
+  const filterBtn = document.getElementById('btnToggleFieldFilter');
+  if (!filterBtn) return;
+  if (state.showAllFields) {
+    filterBtn.textContent = 'ALL';
+    filterBtn.className = 'btn btn--primary btn--sm';
+    filterBtn.title = 'Showing All Fields (Click to show only used fields)';
+  } else {
+    filterBtn.textContent = 'USED';
+    filterBtn.className = 'btn btn--ghost btn--sm';
+    filterBtn.title = 'Showing Used Fields Only (Click to show all fields)';
+  }
+}
+

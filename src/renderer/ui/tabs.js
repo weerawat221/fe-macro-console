@@ -9,10 +9,12 @@ import { renderCommandPanel } from './commandPanel.js';
 
 let persistTimer = null;
 
-async function persistTabs() {
+export async function persistTabs() {
   await window.feMacro.storeSet('tabs', state.tabs);
   await window.feMacro.storeSet('activeTabId', state.activeTabId);
 }
+
+export const persistTabsToStore = persistTabs;
 
 function persistTabsDebounced() {
   if (persistTimer) clearTimeout(persistTimer);

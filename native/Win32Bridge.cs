@@ -5,6 +5,9 @@ using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Windows.Forms;
 
 namespace Win32Bridge {
     class Program {
@@ -60,6 +63,45 @@ namespace Win32Bridge {
 
         [DllImport("user32.dll")]
         static extern bool AllowSetForegroundWindow(int dwProcessId);
+
+        [DllImport("gdi32.dll")]
+        static extern bool BitBlt(IntPtr hObject, int nXDest, int nYDest, int nWidth, int nHeight, IntPtr hObjectSource, int nXSrc, int nYSrc, int dwRop);
+
+        [DllImport("gdi32.dll")]
+        static extern IntPtr CreateCompatibleBitmap(IntPtr hDC, int nWidth, int nHeight);
+
+        [DllImport("gdi32.dll")]
+        static extern IntPtr CreateCompatibleDC(IntPtr hDC);
+
+        [DllImport("gdi32.dll")]
+        static extern bool DeleteDC(IntPtr hDC);
+
+        [DllImport("gdi32.dll")]
+        static extern bool DeleteObject(IntPtr hObject);
+
+        [DllImport("gdi32.dll")]
+        static extern IntPtr SelectObject(IntPtr hDC, IntPtr hObject);
+
+        [DllImport("user32.dll")]
+        static extern IntPtr GetDesktopWindow();
+
+        [DllImport("user32.dll")]
+        static extern IntPtr GetWindowDC(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+        [DllImport("user32.dll")]
+        static extern int GetSystemMetrics(int smIndex);
+
+        [DllImport("user32.dll")]
+        static extern bool SetProcessDPIAware();
+
+        const int SRCCOPY = 0x00CC0020;
+        const int SM_XVIRTUALSCREEN = 76;
+        const int SM_YVIRTUALSCREEN = 77;
+        const int SM_CXVIRTUALSCREEN = 78;
+        const int SM_CYVIRTUALSCREEN = 79;
 
         const int SW_SHOW = 5;
         const int SW_RESTORE = 9;
@@ -300,6 +342,7 @@ namespace Win32Bridge {
         }
 
         static void Main(string[] args) {
+            try { SetProcessDPIAware(); } catch {}
             Console.OutputEncoding = Encoding.UTF8;
             Console.InputEncoding = Encoding.UTF8;
 
@@ -416,6 +459,65 @@ namespace Win32Bridge {
                             return true;
                         }, IntPtr.Zero);
                         Console.WriteLine("[" + string.Join(",", list.ToArray()) + "]");
+                    }
+                    else if (cmd == "SCREENSHOT" || cmd == "SCREENSHOT_RECT" || cmd == "SCREENSHOT_POINT") {
+                        int left = 0;
+                        int top = 0;
+                        int width = 0;
+                        int height = 0;
+
+                        if (cmd == "SCREENSHOT_POINT" && parts.Length >= 3) {
+                            int cursorX = int.Parse(parts[1]);
+                            int cursorY = int.Parse(parts[2]);
+                            Point pt = new Point(cursorX, cursorY);
+                            Screen targetScreen = Screen.FromPoint(pt);
+                            if (targetScreen == null) targetScreen = Screen.PrimaryScreen;
+
+                            left = targetScreen.Bounds.Left;
+                            top = targetScreen.Bounds.Top;
+                            width = targetScreen.Bounds.Width;
+                            height = targetScreen.Bounds.Height;
+                        }
+                        else if (cmd == "SCREENSHOT_RECT" && parts.Length >= 5) {
+                            left = int.Parse(parts[1]);
+                            top = int.Parse(parts[2]);
+                            width = int.Parse(parts[3]);
+                            height = int.Parse(parts[4]);
+                        } else {
+                            left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+                            top = GetSystemMetrics(SM_YVIRTUALSCREEN);
+                            width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+                            height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+                        }
+
+                        if (width <= 0 || height <= 0) {
+                            width = Screen.PrimaryScreen.Bounds.Width;
+                            height = Screen.PrimaryScreen.Bounds.Height;
+                            left = 0;
+                            top = 0;
+                        }
+
+                        IntPtr hDesk = GetDesktopWindow();
+                        IntPtr hDeskDC = GetWindowDC(hDesk);
+                        IntPtr hMemDC = CreateCompatibleDC(hDeskDC);
+                        IntPtr hBitmap = CreateCompatibleBitmap(hDeskDC, width, height);
+                        IntPtr hOld = SelectObject(hMemDC, hBitmap);
+                        BitBlt(hMemDC, 0, 0, width, height, hDeskDC, left, top, SRCCOPY);
+                        SelectObject(hMemDC, hOld);
+
+                        using (Bitmap bmp = Image.FromHbitmap(hBitmap)) {
+                            using (MemoryStream ms = new MemoryStream()) {
+                                bmp.Save(ms, ImageFormat.Png);
+                                byte[] bytes = ms.ToArray();
+                                string b64 = Convert.ToBase64String(bytes);
+                                Console.WriteLine(string.Format("{{\"ok\":true,\"left\":{0},\"top\":{1},\"width\":{2},\"height\":{3},\"dataUrl\":\"data:image/png;base64,{4}\"}}",
+                                    left, top, width, height, b64));
+                            }
+                        }
+
+                        DeleteObject(hBitmap);
+                        DeleteDC(hMemDC);
+                        ReleaseDC(hDesk, hDeskDC);
                     }
                     else {
                         Console.WriteLine("{\"ok\":false,\"reason\":\"Unknown command\"}");

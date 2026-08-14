@@ -37,6 +37,22 @@ contextBridge.exposeInMainWorld('feMacro', {
   exportConfig: (data) => ipcRenderer.invoke('file:exportConfig', data),
   importConfig: () => ipcRenderer.invoke('file:importConfig'),
 
+  // --- OCR Screen Capture & Text Recognition ---
+  startOcrCapture: () => ipcRenderer.invoke('ocr:startCapture'),
+  ocrRecognize: (data) => ipcRenderer.invoke('ocr:recognize', data),
+  ocrApplyValues: (data) => ipcRenderer.invoke('ocr:applyValues', data),
+  ocrCloseOverlay: () => ipcRenderer.invoke('ocr:closeOverlay'),
+  onOcrValuesApplied: (callback) => {
+    const handler = (_evt, payload) => callback(payload);
+    ipcRenderer.on('ocr:valuesApplied', handler);
+    return () => ipcRenderer.removeListener('ocr:valuesApplied', handler);
+  },
+  onOcrCaptureData: (callback) => {
+    const handler = (_evt, payload) => callback(payload);
+    ipcRenderer.on('ocr:captureData', handler);
+    return () => ipcRenderer.removeListener('ocr:captureData', handler);
+  },
+
   // --- environment ---
   getWindowSupport: () => ipcRenderer.invoke('app:getWindowSupport'),
 });

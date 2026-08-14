@@ -3,10 +3,11 @@
 // Window management, focus tracking, Win32 input injection, running app enumeration,
 // and store IPC handlers.
 
-const { app, BrowserWindow, ipcMain, screen, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, dialog, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
+const Tesseract = require('tesseract.js');
 
 const win32 = require('../../native/sendinput_win32');
 const store = require('./store');
@@ -176,9 +177,21 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
 
+  try {
+    globalShortcut.register('Alt+Shift+S', () => {
+      startOcrCapture();
+    });
+  } catch (e) {
+    console.error('Failed to register Alt+Shift+S shortcut:', e);
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {
@@ -491,4 +504,273 @@ ipcMain.handle('file:importConfig', async () => {
 });
 
 ipcMain.handle('app:getWindowSupport', () => ({ nativeSupported: win32.isSupported, platform: process.platform }));
+
+// =========================================================
+// OCR Screen Capture & Text Recognition
+// =========================================================
+
+let ocrOverlayWindow = null;
+let ocrWorker = null;
+
+async function getOcrWorker() {
+  if (!ocrWorker) {
+    ocrWorker = await Tesseract.createWorker('eng');
+    await ocrWorker.setParameters({
+      preserve_interword_spaces: '1',
+    });
+  }
+  return ocrWorker;
+}
+
+async function startOcrCapture() {
+  if (ocrOverlayWindow && !ocrOverlayWindow.isDestroyed()) {
+    ocrOverlayWindow.focus();
+    return { ok: true };
+  }
+
+  // Identify the target display where user's cursor currently is
+  const cursorPoint = screen.getCursorScreenPoint();
+  const activeDisplay = screen.getDisplayNearestPoint(cursorPoint) || screen.getPrimaryDisplay();
+  const { x, y, width, height } = activeDisplay.bounds;
+  const scaleFactor = activeDisplay.scaleFactor || 1;
+
+  const wasVisible = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible();
+  if (wasVisible) {
+    mainWindow.hide();
+  }
+
+  // Small delay to allow screen refresh without our console
+  await new Promise((r) => setTimeout(r, 120));
+
+  // Capture the physical screen from cursor point
+  const captureRes = await win32.captureScreenPoint(cursorPoint.x, cursorPoint.y);
+
+  if (wasVisible && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+  }
+
+  if (!captureRes || !captureRes.ok || !captureRes.dataUrl) {
+    return { ok: false, reason: captureRes?.error || 'Screenshot capture failed' };
+  }
+
+  openOcrOverlayWindow(captureRes, activeDisplay, scaleFactor);
+  return { ok: true };
+}
+
+function openOcrOverlayWindow(captureData, activeDisplay, scaleFactor) {
+  const { x, y, width, height } = activeDisplay.bounds;
+
+  ocrOverlayWindow = new BrowserWindow({
+    x,
+    y,
+    width,
+    height,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    backgroundColor: '#000000',
+    title: 'FE Macro Console — Screen OCR',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  ocrOverlayWindow.setMenuBarVisibility(false);
+  ocrOverlayWindow.loadFile(path.join(__dirname, '..', 'renderer', 'ocr-overlay.html'));
+
+  ocrOverlayWindow.webContents.once('did-finish-load', () => {
+    const variables = store.get('variables', []);
+    const ocrMemory = store.get('ocrMemory', null);
+    ocrOverlayWindow.webContents.send('ocr:captureData', {
+      screenshot: captureData.dataUrl,
+      width,
+      height,
+      scaleFactor,
+      imageWidth: captureData.width,
+      imageHeight: captureData.height,
+      variables,
+      ocrMemory,
+    });
+  });
+
+  ocrOverlayWindow.on('closed', () => {
+    ocrOverlayWindow = null;
+  });
+}
+
+ipcMain.handle('ocr:startCapture', async () => {
+  return startOcrCapture();
+});
+
+function normalizeOcrText(str) {
+  if (!str) return '';
+  let res = str
+    // Fix "66:" or "C6:" misrecognized as CE:
+    .replace(/\b(66|C6|CC)\s*:\s*/gi, 'CE : ')
+    // Fix comma or colon or semicolon as dot in IPv4
+    .replace(/(\b\d{1,3})[,:;](\d{1,3})[,:;](\d{1,3})[,:;](\d{1,3}\b)/g, '$1.$2.$3.$4')
+    // Fix spaces around dots in IPv4
+    .replace(/(\b\d{1,3})\s*\.\s*(\d{1,3})\s*\.\s*(\d{1,3})\s*\.\s*(\d{1,3}\b)/g, '$1.$2.$3.$4')
+    // Fix slash spacing in CIDR
+    .replace(/(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*\/\s*(\d{1,2}\b)/g, '$1/$2')
+    .trim();
+
+  // Repair dropped dots in IPv4 addresses (e.g. 17229.255.14 -> 172.29.255.14, 192168.1.1 -> 192.168.1.1)
+  res = res.replace(/\b(\d{4,6})\.(\d{1,3})\.(\d{1,3})\b/g, (match, head, p2, p3) => {
+    const knownPrefixes = ['172', '192', '100', '169', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32'];
+    for (const prefix of knownPrefixes) {
+      if (head.startsWith(prefix) && head.length > prefix.length) {
+        const rest = head.slice(prefix.length);
+        if (parseInt(rest, 10) <= 255) {
+          return prefix + '.' + rest + '.' + p2 + '.' + p3;
+        }
+      }
+    }
+    if (head.length >= 4) {
+      const p1 = head.slice(0, 3);
+      const rest = head.slice(3);
+      if (parseInt(p1, 10) <= 255 && parseInt(rest, 10) <= 255) {
+        return p1 + '.' + rest + '.' + p2 + '.' + p3;
+      }
+    }
+    return match;
+  });
+
+  return res;
+}
+
+ipcMain.handle('ocr:recognize', async (_evt, { imageBase64, scale = 1 }) => {
+  try {
+    const worker = await getOcrWorker();
+    const base64Data = (imageBase64 || '').replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    const result = await worker.recognize(buffer, {}, { text: true, tsv: true, blocks: true });
+    const data = result?.data || {};
+
+    const words = [];
+    const lines = [];
+
+    // 1. Extract words and lines from TSV
+    if (typeof data.tsv === 'string' && data.tsv.length > 0) {
+      const tsvLines = data.tsv.trim().split('\n');
+      for (let i = 1; i < tsvLines.length; i++) {
+        const cols = tsvLines[i].split('\t');
+        if (cols.length < 12) continue;
+        const level = cols[0];
+        const left = Math.round((parseInt(cols[6], 10) || 0) / scale);
+        const top = Math.round((parseInt(cols[7], 10) || 0) / scale);
+        const width = Math.round((parseInt(cols[8], 10) || 0) / scale);
+        const height = Math.round((parseInt(cols[9], 10) || 0) / scale);
+        const conf = parseFloat(cols[10]) || 0;
+        const rawText = (cols[11] || '').trim();
+        const text = normalizeOcrText(rawText);
+
+        if (level === '5' && text) {
+          const wObj = {
+            id: `w_${words.length}`,
+            text,
+            confidence: conf,
+            bbox: {
+              x0: left,
+              y0: top,
+              x1: left + width,
+              y1: top + height,
+            },
+          };
+          words.push(wObj);
+          if (lines.length > 0) {
+            lines[lines.length - 1].words.push(wObj);
+          }
+        } else if (level === '4' && text) {
+          lines.push({
+            id: `l_${lines.length}`,
+            text,
+            confidence: conf,
+            bbox: {
+              x0: left,
+              y0: top,
+              x1: left + width,
+              y1: top + height,
+            },
+            words: [],
+          });
+        }
+      }
+    }
+
+    // 2. Group lines into coherent cards (if adjacent vertically)
+    const cards = [];
+    const sortedLines = [...lines].sort((a, b) => a.bbox.y0 - b.bbox.y0);
+
+    sortedLines.forEach((line) => {
+      // Check if this line belongs to an existing card nearby
+      let matchedCard = null;
+      for (const card of cards) {
+        const xOverlap = Math.max(0, Math.min(card.bbox.x1, line.bbox.x1) - Math.max(card.bbox.x0, line.bbox.x0));
+        const yDist = line.bbox.y0 - card.bbox.y1;
+        if (xOverlap > 10 && yDist >= -5 && yDist <= 18) {
+          matchedCard = card;
+          break;
+        }
+      }
+
+      if (matchedCard) {
+        matchedCard.lines.push(line);
+        matchedCard.text += '\n' + line.text;
+        matchedCard.bbox.x0 = Math.min(matchedCard.bbox.x0, line.bbox.x0);
+        matchedCard.bbox.y0 = Math.min(matchedCard.bbox.y0, line.bbox.y0);
+        matchedCard.bbox.x1 = Math.max(matchedCard.bbox.x1, line.bbox.x1);
+        matchedCard.bbox.y1 = Math.max(matchedCard.bbox.y1, line.bbox.y1);
+      } else {
+        cards.push({
+          id: `card_${cards.length}`,
+          text: line.text,
+          lines: [line],
+          bbox: { ...line.bbox },
+        });
+      }
+    });
+
+    return {
+      ok: true,
+      text: normalizeOcrText(data.text || ''),
+      words,
+      lines,
+      cards,
+    };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('ocr:applyValues', async (_evt, { values, ocrMemory }) => {
+  if (ocrMemory) {
+    store.set('ocrMemory', ocrMemory);
+  }
+
+  // Broadcast applied values to main window
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('ocr:valuesApplied', values);
+  }
+
+  if (ocrOverlayWindow && !ocrOverlayWindow.isDestroyed()) {
+    ocrOverlayWindow.close();
+  }
+
+  return { ok: true };
+});
+
+ipcMain.handle('ocr:closeOverlay', () => {
+  if (ocrOverlayWindow && !ocrOverlayWindow.isDestroyed()) {
+    ocrOverlayWindow.close();
+  }
+  return true;
+});
 

@@ -80,6 +80,16 @@ function getActiveVariablesForCurrentMode() {
   return relevant;
 }
 
+function getVisibleVariables() {
+  if (state.showAllFields) {
+    const varList = Array.isArray(state.variables) && state.variables.length > 0
+      ? state.variables
+      : [];
+    if (varList.length > 0) return varList;
+  }
+  return getActiveVariablesForCurrentMode();
+}
+
 export function renderFieldPanel() {
   const panel = document.getElementById('fieldPanel');
   if (!panel) return;
@@ -92,7 +102,7 @@ export function renderFieldPanel() {
     return;
   }
 
-  const relevantVars = getActiveVariablesForCurrentMode();
+  const relevantVars = getVisibleVariables();
 
   if (relevantVars.length === 0) {
     panel.innerHTML = '';
@@ -101,7 +111,7 @@ export function renderFieldPanel() {
     return;
   }
 
-  const currentKeySignature = relevantVars.map((v) => v.key).join(',');
+  const currentKeySignature = (state.showAllFields ? 'ALL:' : 'USED:') + relevantVars.map((v) => v.key).join(',');
 
   // If DOM structure matches current signature, update values in-place without destroying focus
   if (lastRenderedVarKeys === currentKeySignature && panel.children.length > 0) {

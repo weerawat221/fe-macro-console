@@ -27,6 +27,9 @@ export const state = {
   // --- global variable definitions ---
   variables: [...DEFAULT_VARIABLES],
 
+  // --- input fields filter mode ---
+  showAllFields: false, // false = used only in active mode, true = show all fields
+
   // --- transient UI ---
   errorText: '',
 

@@ -3,5 +3,6 @@ dist/
 out/
 build/
 *.log
+*.traineddata
 .DS_Store
 Thumbs.db

@@ -131,6 +131,24 @@ async function listWindows() {
   return Array.isArray(res) ? res : [];
 }
 
+async function captureScreen() {
+  if (!isSupported) return { ok: false, reason: 'Not supported' };
+  const res = await sendCommand('SCREENSHOT');
+  return res || { ok: false };
+}
+
+async function captureScreenRect(left, top, width, height) {
+  if (!isSupported) return { ok: false, reason: 'Not supported' };
+  const res = await sendCommand(`SCREENSHOT_RECT|${Math.round(left)}|${Math.round(top)}|${Math.round(width)}|${Math.round(height)}`);
+  return res || { ok: false };
+}
+
+async function captureScreenPoint(cursorX, cursorY) {
+  if (!isSupported) return { ok: false, reason: 'Not supported' };
+  const res = await sendCommand(`SCREENSHOT_POINT|${Math.round(cursorX)}|${Math.round(cursorY)}`);
+  return res || { ok: false };
+}
+
 if (isSupported) {
   startBridge();
 }
@@ -144,4 +162,7 @@ module.exports = {
   isWindow,
   sendText,
   listWindows,
+  captureScreen,
+  captureScreenRect,
+  captureScreenPoint,
 };

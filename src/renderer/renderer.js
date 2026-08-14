@@ -1,7 +1,7 @@
 // renderer.js
 // Application entry point. Loads persisted state, initializes UI zones and event listeners.
 
-import { state, setState } from './state.js';
+import { state, setState, getActiveTab } from './state.js';
 import {
   DEFAULT_COMMAND_SETS,
   DEFAULT_VARIABLES,
@@ -10,7 +10,7 @@ import {
 } from '../shared/defaultCommandsClient.js';
 
 import { initHeader } from './ui/header.js';
-import { initTabBar, loadTabsFromStore } from './ui/tabs.js';
+import { initTabBar, loadTabsFromStore, persistTabsToStore } from './ui/tabs.js';
 import { renderFieldPanel } from './ui/fieldPanel.js';
 import { renderModeSelector } from './ui/modeSelector.js';
 import { renderCommandPanel } from './ui/commandPanel.js';
@@ -32,12 +32,15 @@ async function bootstrap() {
   const storedVars = await window.feMacro.storeGet('variables', null);
   const normalizedVars = normalizeVariables(storedVars || DEFAULT_VARIABLES);
 
+  const showAllFields = await window.feMacro.storeGet('showAllFields', false);
+
   const firstAppKey = Object.keys(normalizedSets)[0] || 'RDM';
   const firstSubmode = Object.keys(normalizedSets[firstAppKey]?.submodes || {})[0] || 'DEFAULT';
 
   setState({
     commandSets: normalizedSets,
     variables: normalizedVars,
+    showAllFields: !!showAllFields,
     editorActiveApp: firstAppKey,
     editorActiveSubmode: firstSubmode,
     activeSubmodes: {
@@ -80,6 +83,52 @@ async function bootstrap() {
         renderFieldPanel();
         renderCommandPanel();
       }
+    });
+  }
+
+  // Listen for OCR values applied from OCR overlay
+  if (window.feMacro.onOcrValuesApplied) {
+    window.feMacro.onOcrValuesApplied((values) => {
+      if (!values || typeof values !== 'object') return;
+      const tab = getActiveTab();
+      if (!tab) return;
+
+      Object.entries(values).forEach(([k, val]) => {
+        if (val !== undefined && val !== null) {
+          let cleaned = String(val).trim();
+          const keyLower = k.toLowerCase();
+          if (keyLower.includes('vlan')) {
+            const m = cleaned.match(/\d+/);
+            if (m) cleaned = m[0];
+          } else if (keyLower.includes('ip') || keyLower.includes('stelnet') || keyLower.includes('lan') || keyLower.includes('ce') || keyLower.includes('pe')) {
+            cleaned = cleaned.replace(/\/\d{1,2}$/, '');
+            cleaned = cleaned.replace(/^(PE|CE|Lan|LAN|PORT|SW|OLT|AP|ONU)\s*:\s*/i, '');
+            // Auto repair IP
+            const chunks = cleaned.split('.').filter(Boolean);
+            let octets = [];
+            for (let i = 0; i < chunks.length; i++) {
+              const c = chunks[i];
+              if (c.length === 6) {
+                octets.push(c.slice(0, 3), c.slice(3));
+              } else if (c.length === 5) {
+                octets.push(c.slice(0, 3), c.slice(3));
+              } else if (c.length === 4) {
+                if (octets.length === 2) octets.push(c.slice(0, 1), c.slice(1));
+                else octets.push(c.slice(0, 2), c.slice(2));
+              } else {
+                octets.push(c);
+              }
+            }
+            if (octets.length === 4 && octets.every((o) => parseInt(o, 10) <= 255)) {
+              cleaned = octets.join('.');
+            }
+          }
+          tab.values[k] = cleaned;
+        }
+      });
+
+      renderFieldPanel();
+      persistTabsToStore();
     });
   }
 

@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "electron-store": "^8.2.0",
-    "sendinput-win32": "file:native/sendinput_win32"
+    "sendinput-win32": "file:native/sendinput_win32",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.6.1",
@@ -27,7 +28,12 @@
     "productName": "FE Macro Console",
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "requestedExecutionLevel": "asInvoker"
     },
