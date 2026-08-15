@@ -1,6 +1,3 @@
-// commandRunner.js
-// Dynamic command template resolution, IP calculations, and native execution.
-
 import { state, getActiveTab } from './state.js';
 import { showError } from './ui/errorBanner.js';
 import { openConfirmModal } from './ui/confirmModal.js';
@@ -27,31 +24,62 @@ export function formatBlueIp(ipString) {
   }
 }
 
-export function formatBlueConfigFull(ipBase, mask = '255.255.255.248') {
+export function formatBlueConfigFull(ipBase, mask) {
+  const effectiveMask = mask || getSystemVarDefault('lan_mask') || '255.255.255.248';
   const ip2 = calculateIp(ipBase, 1);
   const ip3 = calculateIp(ipBase, 2);
-  return `${formatBlueIp(ipBase)}${formatBlueIp(mask)}${formatBlueIp(ip2)}${formatBlueIp(ip3)}\t${formatBlueIp(ipBase)}`;
+  return `${formatBlueIp(ipBase)}${formatBlueIp(effectiveMask)}${formatBlueIp(ip2)}${formatBlueIp(ip3)}\t${formatBlueIp(ipBase)}`;
+}
+
+/** Lookup default_value for a system variable from state.variables */
+function getSystemVarDefault(key) {
+  const vars = Array.isArray(state.variables) ? state.variables : [];
+  const def = vars.find((v) => v.key === key);
+  return def ? (def.default_value || null) : null;
+}
+
+/** Evaluate a formula variable (e.g. olt, onu_idx) given input values */
+function evaluateFormula(formula, values) {
+  if (!formula) return '';
+  try {
+    // Safe eval: only simple split/index expressions
+    const portVal = (values.port || '').trim();
+    if (formula === 'port.split(":")[0]') return portVal.split(':')[0] || '';
+    if (formula === 'port.split(":")[1]') {
+      const parts = portVal.split(':');
+      return parts.length > 1 ? parts[parts.length - 1] : portVal;
+    }
+    return '';
+  } catch {
+    return '';
+  }
 }
 
 function buildTemplateData(tab) {
   const v = tab.values || {};
-  const portVal = (v.port || '').trim();
-  const hasColon = portVal.includes(':');
-  const onuIdx = hasColon ? portVal.split(':').pop() : portVal;
-  const olt = hasColon ? portVal.split(':')[0].trim() : '';
+  const vars = Array.isArray(state.variables) ? state.variables : [];
+  const data = { ...v };
 
-  const data = {
-    ...v,
-    onu_idx: onuIdx,
-    olt,
-    lan_mask: '255.255.255.248',
-    mask: '255.255.255.248',
-  };
-
-  // Trim all string values
+  // Trim all string values from user input
   Object.keys(data).forEach((k) => {
     if (typeof data[k] === 'string') data[k] = data[k].trim();
   });
+
+  // Resolve system variables: formula-based first, then default_value constants
+  vars.forEach((varDef) => {
+    if (!varDef.system) return;
+    if (data[varDef.key]) return; // user already set value in tab
+
+    if (varDef.formula) {
+      data[varDef.key] = evaluateFormula(varDef.formula, data);
+    } else if (varDef.default_value !== undefined) {
+      data[varDef.key] = varDef.default_value;
+    }
+  });
+
+  // Fallback for lan_mask / mask if not defined in variables list
+  if (!data.lan_mask) data.lan_mask = getSystemVarDefault('lan_mask') || '255.255.255.248';
+  if (!data.mask) data.mask = data.lan_mask;
 
   return data;
 }
@@ -107,7 +135,7 @@ function resolveToken(token, data) {
   }
 
   if (t === 'lan_mask' || t === 'mask') {
-    return '255.255.255.248';
+    return data[t] || getSystemVarDefault(t) || '255.255.255.248';
   }
 
   throw new Error(`MISSING_TOKEN:${t}`);

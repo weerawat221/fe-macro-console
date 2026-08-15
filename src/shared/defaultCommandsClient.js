@@ -217,6 +217,7 @@ export const DEFAULT_COMMAND_SETS = {
 };
 
 export const DEFAULT_VARIABLES = [
+  // --- User-visible input variables ---
   { key: 'sr_ap', label: 'SR Name (AP)', description: 'Service Request Name for AP' },
   { key: 'group_id', label: 'ID (AP)', description: 'Group ID for AP' },
   { key: 'group_name', label: 'Group Name (AP)', description: 'AP Group Name' },
@@ -228,6 +229,11 @@ export const DEFAULT_VARIABLES = [
   { key: 'ce_ip', label: 'CE IP (ONU)', description: 'Customer Edge IP' },
   { key: 'pe_ip', label: 'PE IP (ONU)', description: 'Provider Edge IP' },
   { key: 'captcha', label: 'CAPTCHA (ID)', description: 'Browser Captcha / Login code' },
+  // --- System variables (computed / constant — editable default_value) ---
+  { key: 'lan_mask', label: 'LAN Mask', description: 'Subnet mask for LAN config', default_value: '255.255.255.248', system: true },
+  { key: 'mask',     label: 'Mask (alias of lan_mask)', description: 'Alias for lan_mask', default_value: '255.255.255.248', system: true },
+  { key: 'olt',      label: 'OLT (auto from Port)', description: 'Auto-split from {port} before ":"', formula: 'port.split(":")[0]', system: true, readonly: true },
+  { key: 'onu_idx',  label: 'ONU Index (auto from Port)', description: 'Auto-split from {port} after ":"', formula: 'port.split(":")[1]', system: true, readonly: true },
 ];
 
 export function normalizeVariables(stored) {
@@ -240,13 +246,24 @@ export function normalizeVariables(stored) {
         key: v.key,
         label: v.label || v.key,
         description: v.description || '',
+        ...(v.locked ? { locked: true } : {}),
+        ...(v.hidden ? { hidden: true } : {}),
+        ...(v.system ? { system: v.system } : {}),
+        ...(v.readonly ? { readonly: v.readonly } : {}),
+        ...(v.formula ? { formula: v.formula } : {}),
+        ...(v.default_value !== undefined ? { default_value: v.default_value } : {}),
       });
     }
   });
 
+  // Ensure all default variables are present (add missing ones)
   DEFAULT_VARIABLES.forEach((def) => {
     if (!keyMap.has(def.key)) {
       keyMap.set(def.key, def);
+    } else if (def.system) {
+      // Re-apply system metadata in case it was stripped during older store save
+      const existing = keyMap.get(def.key);
+      keyMap.set(def.key, { ...def, ...existing, system: true });
     }
   });
 

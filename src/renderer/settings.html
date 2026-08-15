@@ -15,11 +15,11 @@
     <header class="settings-header">
       <div class="editor-header-left">
         <h1 class="settings-window-title">Setting</h1>
-        <!-- Top navbar: Command Sets vs Valuable vs View -->
+        <!-- Top navbar: Command Sets vs Variables vs View -->
         <nav class="editor-top-nav" role="tablist">
           <button id="tabNavApps" class="editor-top-tab editor-top-tab--active" role="tab" aria-selected="true">Command
             Sets (Apps)</button>
-          <button id="tabNavVariables" class="editor-top-tab" role="tab" aria-selected="false">Valuable</button>
+          <button id="tabNavVariables" class="editor-top-tab" role="tab" aria-selected="false">Variables</button>
           <button id="tabNavView" class="editor-top-tab" role="tab" aria-selected="false">View</button>
         </nav>
       </div>
@@ -80,11 +80,11 @@
         </div>
       </div>
 
-      <!-- PAGE 2: VALUABLE (VARIABLES) MANAGER -->
+      <!-- PAGE 2: VARIABLES MANAGER -->
       <div id="editorViewVariables" class="editor-body editor-body--column" style="display:none;">
         <div class="var-manager-header">
           <div class="var-manager-info">
-            <span class="var-manager-title">Valuable (Variables &amp; Tokens)</span>
+            <span class="var-manager-title">Variables &amp; Tokens</span>
             <span class="var-manager-desc">Manage all variable tokens used for text input fields and macro command
               templates.</span>
           </div>
@@ -174,7 +174,7 @@
       </div>
       <div class="form-body">
         <div class="conflict-header-msg">
-          The imported file contains Command Sets or Valuable variables that already exist in your settings.
+        The imported file contains Command Sets or Variables that already exist in your settings.
           Choose how you would like to resolve each duplicate:
         </div>
         <div class="conflict-quick-bar">
@@ -208,6 +208,20 @@
 
         <label class="form-label" for="vfDescription">Description / Placeholder</label>
         <input id="vfDescription" class="form-input" placeholder="e.g. SN12345678" />
+
+        <label class="form-label" for="vfDefaultValue">Default Value (optional)</label>
+        <input id="vfDefaultValue" class="form-input" placeholder="e.g. 255.255.255.248" />
+
+        <div style="display:flex;gap:16px;margin-top:4px;">
+          <label class="form-checkbox">
+            <input type="checkbox" id="vfLocked" />
+            🔒 Lock (preserve value on Clear)
+          </label>
+          <label class="form-checkbox">
+            <input type="checkbox" id="vfHidden" />
+            🔐 Hidden (password-protected access)
+          </label>
+        </div>
       </div>
       <div class="modal-footer modal-footer--split">
         <button id="vfDelete" class="btn btn--danger-ghost">Delete</button>
@@ -407,6 +421,71 @@
       <div class="modal-footer">
         <button id="ctCancel" class="btn btn--ghost">Cancel</button>
         <button id="ctSave" class="btn btn--primary">Save Custom Theme</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============ ADMIN PASSWORD MODAL (for hidden variable ops) ============ -->
+  <div id="adminPasswordModal" class="modal-overlay modal-overlay--hidden">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="adminPwTitle">
+      <div class="modal-header">
+        <h2 id="adminPwTitle">🔐 Admin Password Required</h2>
+      </div>
+      <div class="form-body">
+        <p id="adminPwMessage" style="color:var(--text-dim);font-size:11px;margin-bottom:8px;">Enter admin password to continue.</p>
+        <label class="form-label" for="adminPwInput">Password</label>
+        <input id="adminPwInput" class="form-input" type="password" placeholder="Alphanumeric, 6+ characters" autocomplete="off" />
+        <span id="adminPwError" class="form-help" style="color:var(--error);display:none;">Incorrect password. Try again.</span>
+        <div id="adminPwSetupNote" style="display:none;">
+          <span class="form-help" style="color:var(--signal);">First use: Set a new admin password (alphanumeric, 6+ characters). This protects all Hidden Variables.</span>
+          <label class="form-label" for="adminPwConfirm" style="margin-top:8px;">Confirm Password</label>
+          <input id="adminPwConfirm" class="form-input" type="password" placeholder="Confirm password" autocomplete="off" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="adminPwCancel" class="btn btn--ghost">Cancel</button>
+        <button id="adminPwConfirmBtn" class="btn btn--primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ EXPORT PASSWORD SETUP MODAL ============ -->
+  <div id="exportPasswordModal" class="modal-overlay modal-overlay--hidden">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="exportPwTitle">
+      <div class="modal-header">
+        <h2 id="exportPwTitle">Set Export Password</h2>
+      </div>
+      <div class="form-body">
+        <p style="color:var(--text-dim);font-size:11px;margin-bottom:8px;">Set a 6-digit numeric PIN to encrypt this export file. You will need this PIN to import the file later.</p>
+        <label class="form-label" for="exportPwInput">Export PIN (6 digits)</label>
+        <input id="exportPwInput" class="form-input" type="password" inputmode="numeric" maxlength="6" placeholder="6-digit number" autocomplete="off" />
+        <label class="form-label" for="exportPwConfirm" style="margin-top:8px;">Confirm PIN</label>
+        <input id="exportPwConfirm" class="form-input" type="password" inputmode="numeric" maxlength="6" placeholder="Repeat PIN" autocomplete="off" />
+        <span id="exportPwError" class="form-help" style="color:var(--error);display:none;">PINs do not match or invalid (must be 6 digits).</span>
+      </div>
+      <div class="modal-footer">
+        <button id="exportPwCancel" class="btn btn--ghost">Cancel</button>
+        <button id="exportPwConfirmBtn" class="btn btn--primary">Encrypt &amp; Export</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ IMPORT PASSWORD ENTRY MODAL ============ -->
+  <div id="importPasswordModal" class="modal-overlay modal-overlay--hidden">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="importPwTitle">
+      <div class="modal-header">
+        <h2 id="importPwTitle">Encrypted Import File</h2>
+      </div>
+      <div class="form-body">
+        <p style="color:var(--text-dim);font-size:11px;margin-bottom:8px;">This file is encrypted. Enter the export PIN used when the file was created.</p>
+        <label class="form-label" for="importPwInput">Export PIN</label>
+        <input id="importPwInput" class="form-input" type="password" inputmode="numeric" maxlength="6" placeholder="6-digit PIN" autocomplete="off" />
+        <span id="importPwError" class="form-help" style="color:var(--error);display:none;">Incorrect PIN. Unable to decrypt file.</span>
+      </div>
+      <div class="modal-footer">
+        <button id="importPwCancel" class="btn btn--ghost">Cancel</button>
+        <button id="importPwConfirmBtn" class="btn btn--primary">Decrypt &amp; Import</button>
       </div>
     </div>
   </div>

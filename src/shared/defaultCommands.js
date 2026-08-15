@@ -217,6 +217,7 @@ const DEFAULT_COMMAND_SETS = {
 };
 
 const DEFAULT_VARIABLES = [
+  // --- User-visible input variables ---
   { key: 'sr_ap', label: 'SR Name (AP)', description: 'Service Request Name for AP' },
   { key: 'group_id', label: 'ID (AP)', description: 'Group ID for AP' },
   { key: 'group_name', label: 'Group Name (AP)', description: 'AP Group Name' },
@@ -228,6 +229,11 @@ const DEFAULT_VARIABLES = [
   { key: 'ce_ip', label: 'CE IP (ONU)', description: 'Customer Edge IP' },
   { key: 'pe_ip', label: 'PE IP (ONU)', description: 'Provider Edge IP' },
   { key: 'captcha', label: 'CAPTCHA (ID)', description: 'Browser Captcha / Login code' },
+  // --- System variables (computed / constant — editable default_value) ---
+  { key: 'lan_mask', label: 'LAN Mask', description: 'Subnet mask for LAN config', default_value: '255.255.255.248', system: true },
+  { key: 'mask',     label: 'Mask (alias of lan_mask)', description: 'Alias for lan_mask', default_value: '255.255.255.248', system: true },
+  { key: 'olt',      label: 'OLT (auto from Port)', description: 'Auto-split from {port} before ":"', formula: 'port.split(":")[0]', system: true, readonly: true },
+  { key: 'onu_idx',  label: 'ONU Index (auto from Port)', description: 'Auto-split from {port} after ":"', formula: 'port.split(":")[1]', system: true, readonly: true },
 ];
 
 function normalizeVariables(stored) {

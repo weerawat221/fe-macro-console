@@ -1,5 +1,5 @@
 // editor.js
-// Custom command & profile editor with top navigation for Command Sets (Apps) and Valuable (Variables).
+// Custom command & profile editor with top navigation for Command Sets (Apps) and Variables.
 // Supports multi-program assignment per command set, preventing duplicate assignments,
 // managing sub-macro sets, command groups, drag-and-drop command reordering / group moving with grip-lines icon,
 // full variable/token management, and full Export/Import with Conflict Resolution.
@@ -28,7 +28,7 @@ export function initEditor() {
     });
   }
 
-  // Top navbar tab switching (Command sets vs Valuable)
+  // Top navbar tab switching (Command sets vs Variables)
   const tabApps = document.getElementById('tabNavApps');
   if (tabApps) tabApps.addEventListener('click', () => switchEditorTab('apps'));
 
@@ -55,7 +55,7 @@ export function initEditor() {
   const btnAddProc = document.getElementById('btnAddProcToSet');
   if (btnAddProc) btnAddProc.addEventListener('click', openAddProcModal);
 
-  // Valuable view actions
+  // Variables view actions
   const btnAddVar = document.getElementById('btnAddVariable');
   if (btnAddVar) btnAddVar.addEventListener('click', openNewVariableModal);
 
@@ -229,7 +229,7 @@ async function handleImportConfig() {
     const incomingVars = Array.isArray(data.variables) ? data.variables : [];
 
     if (Object.keys(incomingSets).length === 0 && incomingVars.length === 0) {
-      showError('The selected file does not contain any Command Sets or Valuable variables');
+      showError('The selected file does not contain any Command Sets or Variables');
       return;
     }
 
@@ -317,7 +317,7 @@ function openConflictModal(incomingSets, incomingVars, conflicts) {
 
     const badge = document.createElement('span');
     badge.className = `conflict-item-badge ${c.type === 'app' ? 'conflict-item-badge--app' : 'conflict-item-badge--var'}`;
-    badge.textContent = c.type === 'app' ? 'Command Set' : 'Valuable';
+    badge.textContent = c.type === 'app' ? 'Command Set' : 'Variable';
     title.appendChild(badge);
 
     const labelSpan = document.createElement('span');
@@ -1388,7 +1388,7 @@ function deleteCommandForm() {
 }
 
 // =========================================================
-// Valuable (Variables) Manager View & Modal
+// Variables Manager View & Modal
 // =========================================================
 
 function getVariableUsageMap() {
@@ -1442,6 +1442,7 @@ function renderVariablesManager() {
     const originalIndex = state.variables.findIndex((item) => item.key === v.key);
     const card = document.createElement('div');
     card.className = 'var-card';
+    if (v.hidden) card.style.outline = '1px solid var(--signal, #5eead4)';
 
     const header = document.createElement('div');
     header.className = 'var-card-header';
@@ -1453,6 +1454,37 @@ function renderVariablesManager() {
 
     const actions = document.createElement('div');
     actions.className = 'var-card-actions';
+    actions.style.cssText = 'display:flex;gap:4px;align-items:center;';
+
+    // System badge
+    if (v.system) {
+      const sysBadge = document.createElement('span');
+      sysBadge.textContent = v.formula ? '⚙ auto' : '⚙ const';
+      sysBadge.style.cssText = 'font-size:9px;opacity:0.6;padding:1px 4px;border-radius:3px;background:var(--bg-surface);';
+      actions.appendChild(sysBadge);
+    }
+
+    // Lock toggle button
+    const lockBtn = document.createElement('button');
+    lockBtn.className = 'btn btn--ghost btn--xs';
+    lockBtn.title = v.locked ? 'Locked (click to unlock)' : 'Unlocked (click to lock)';
+    lockBtn.textContent = v.locked ? String.fromCodePoint(0x1F512) : String.fromCodePoint(0x1F513);
+    lockBtn.addEventListener('click', () => {
+      state.variables[originalIndex] = { ...state.variables[originalIndex], locked: !v.locked };
+      setState({ variables: [...state.variables] });
+      persistVariables();
+      renderVariablesManager();
+    });
+    actions.appendChild(lockBtn);
+
+    // Hidden badge
+    if (v.hidden) {
+      const hidBadge = document.createElement('span');
+      hidBadge.textContent = String.fromCodePoint(0x1F510);
+      hidBadge.title = 'Hidden — password-protected';
+      hidBadge.style.cssText = 'font-size:12px;';
+      actions.appendChild(hidBadge);
+    }
 
     const editBtn = document.createElement('button');
     editBtn.className = 'btn btn--ghost btn--xs';
@@ -1466,6 +1498,8 @@ function renderVariablesManager() {
     const labelSpan = document.createElement('span');
     labelSpan.className = 'var-card-label';
     labelSpan.textContent = v.label || v.key;
+    if (v.hidden) labelSpan.textContent += ' 🔐';
+    if (v.locked) labelSpan.textContent += ' 🔒';
     card.appendChild(labelSpan);
 
     if (v.description) {
@@ -1475,12 +1509,19 @@ function renderVariablesManager() {
       card.appendChild(descSpan);
     }
 
+    if (v.default_value) {
+      const defSpan = document.createElement('span');
+      defSpan.className = 'var-card-desc';
+      defSpan.style.color = 'var(--text-dim)';
+      defSpan.textContent = `Default: ${v.default_value}`;
+      card.appendChild(defSpan);
+    }
+
     const usages = usageMap.get(v.key);
     const usageSpan = document.createElement('span');
     usageSpan.className = 'var-card-desc';
     usageSpan.style.color = 'var(--text-muted)';
     usageSpan.style.marginTop = '2px';
-
     if (usages && usages.size > 0) {
       usageSpan.textContent = `Used in: ${Array.from(usages).slice(0, 3).join(', ')}${usages.size > 3 ? ` (+${usages.size - 3} more)` : ''}`;
     } else {
@@ -1509,7 +1550,7 @@ function openNewVariableModal() {
 function openVariableForm(index) {
   editingVarIndex = index;
   const isNew = index === null;
-  const v = isNew ? { key: '', label: '', description: '' } : state.variables[index];
+  const v = isNew ? { key: '', label: '', description: '', default_value: '', locked: false, hidden: false } : state.variables[index];
 
   document.getElementById('varFormTitle').textContent = isNew ? 'Add Variable' : 'Edit Variable';
   const keyInput = document.getElementById('vfKey');
@@ -1518,6 +1559,12 @@ function openVariableForm(index) {
 
   document.getElementById('vfLabel').value = v.label || '';
   document.getElementById('vfDescription').value = v.description || '';
+  const dvEl = document.getElementById('vfDefaultValue');
+  if (dvEl) dvEl.value = v.default_value || '';
+  const lockEl = document.getElementById('vfLocked');
+  if (lockEl) lockEl.checked = Boolean(v.locked);
+  const hidEl = document.getElementById('vfHidden');
+  if (hidEl) hidEl.checked = Boolean(v.hidden);
   document.getElementById('vfDelete').style.display = isNew ? 'none' : 'inline-flex';
 
   document.getElementById('varFormModal').classList.remove('modal-overlay--hidden');
@@ -1534,32 +1581,28 @@ function saveVariableForm() {
   const rawKey = document.getElementById('vfKey').value.trim();
   const label = document.getElementById('vfLabel').value.trim();
   const description = document.getElementById('vfDescription').value.trim();
+  const dvEl = document.getElementById('vfDefaultValue');
+  const default_value = dvEl ? dvEl.value.trim() : '';
+  const lockEl = document.getElementById('vfLocked');
+  const locked = lockEl ? lockEl.checked : false;
+  const hidEl = document.getElementById('vfHidden');
+  const hidden = hidEl ? hidEl.checked : false;
 
-  if (!rawKey) {
-    showError('Variable key is required');
-    return;
-  }
-
+  if (!rawKey) { showError('Variable key is required'); return; }
   const key = rawKey.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-  if (!label) {
-    showError('Field label is required');
-    return;
-  }
+  if (!label) { showError('Field label is required'); return; }
 
   const isNew = editingVarIndex === null;
+  const varObj = { key, label, description, ...(default_value ? { default_value } : {}), ...(locked ? { locked } : {}), ...(hidden ? { hidden, locked: true } : {}) };
 
   if (isNew) {
     if (state.variables.some((v) => v.key.toLowerCase() === key)) {
       showError(`Variable key "${key}" already exists`);
       return;
     }
-    state.variables.push({ key, label, description });
+    state.variables.push(varObj);
   } else {
-    state.variables[editingVarIndex] = {
-      key: state.variables[editingVarIndex].key,
-      label,
-      description,
-    };
+    state.variables[editingVarIndex] = { ...state.variables[editingVarIndex], ...varObj, key: state.variables[editingVarIndex].key };
   }
 
   setState({ variables: [...state.variables] });

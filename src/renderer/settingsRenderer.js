@@ -1,6 +1,8 @@
 // settingsRenderer.js
 // Dedicated standalone window renderer for FE Macro Console Settings.
-// Manages Command Sets, Valuable (Variables), View & Themes, and Export/Import with Conflict Resolution.
+// Manages Command Sets, Variables, View & Themes, and Export/Import with Conflict Resolution.
+// Hidden Variables are protected by PBKDF2+AES-GCM admin password.
+// Export is encrypted with a user-set 6-digit PIN.
 
 import {
   getAllThemes,
@@ -12,6 +14,7 @@ import {
   rgbToHex,
   generateCustomThemeObject,
 } from './theme.js';
+import { hashPassword, verifyPassword, encryptPayload, decryptPayload } from './crypto.js';
 
 let commandSets = {};
 let variables = [];
@@ -25,7 +28,12 @@ let editingVarIndex = null;
 let nsAutoNameTracking = true;
 let varSearchQuery = '';
 let pendingImportData = null;
+let pendingExportPayload = null; // held while waiting for export PIN
 let draggedCmdInfo = null;
+
+// Admin password state (for hidden variables)
+let adminAuthCallback = null; // function to call after successful admin auth
+let adminIsSetup = false; // whether admin password has been set
 
 // Custom Theme Creator State
 let ctTargetColors = {
@@ -53,6 +61,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   viewConfig = await loadAndApplyViewConfig();
   commandSets = await window.feMacro.storeGet('commandSets', {});
   variables = await window.feMacro.storeGet('variables', []);
+
+  // Load admin password setup status
+  const adminHash = await window.feMacro.storeGet('adminPwHash', null);
+  adminIsSetup = Boolean(adminHash);
 
   const appKeys = Object.keys(commandSets);
   if (appKeys.length > 0) {
@@ -100,7 +112,7 @@ function initUI() {
   document.getElementById('btnAddGroup').addEventListener('click', addNewGroup);
   document.getElementById('btnAddProcToSet').addEventListener('click', openAddProcModal);
 
-  // Valuable actions
+  // Variables actions
   document.getElementById('btnAddVariable').addEventListener('click', openNewVariableModal);
   const searchInput = document.getElementById('varSearchInput');
   if (searchInput) {
@@ -121,11 +133,17 @@ function initUI() {
   initCommandFormModal();
   initVariableFormModal();
   initConflictModal();
+  initAdminPasswordModal();
+  initExportPasswordModal();
+  initImportPasswordModal();
 
   // Escape key closes modals
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       const openModals = [
+        { id: 'adminPasswordModal', close: closeAdminPasswordModal },
+        { id: 'exportPasswordModal', close: closeExportPasswordModal },
+        { id: 'importPasswordModal', close: closeImportPasswordModal },
         { id: 'customThemeModal', close: closeCustomThemeModal },
         { id: 'commandFormModal', close: closeCommandForm },
         { id: 'varFormModal', close: closeVariableForm },
@@ -637,24 +655,18 @@ async function deleteCustomTheme(themeKey) {
 // =========================================================
 
 async function handleExportConfig() {
-  const payload = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    commandSets,
-    variables,
-    viewConfig,
-  };
-
-  try {
-    const res = await window.feMacro.exportConfig(payload);
-    if (res.ok) {
-      showToast('Settings exported successfully!');
-    } else if (res.error) {
-      showToast(`Export failed: ${res.error}`);
-    }
-  } catch (err) {
-    showToast(`Export error: ${err.message}`);
-  }
+  // Step 1: require admin password verification
+  requireAdminPassword('Export Settings', async () => {
+    // Step 2: ask for export PIN
+    pendingExportPayload = {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      commandSets,
+      variables,
+      viewConfig,
+    };
+    openExportPasswordModal();
+  });
 }
 
 async function handleImportConfig() {
@@ -666,59 +678,59 @@ async function handleImportConfig() {
       return;
     }
 
-    const data = res.data;
-    const incomingSets = data.commandSets || {};
-    const incomingVars = Array.isArray(data.variables) ? data.variables : [];
-    const incomingView = data.viewConfig || null;
+    const rawData = res.data;
 
-    if (Object.keys(incomingSets).length === 0 && incomingVars.length === 0) {
-      showToast('The selected file does not contain any Command Sets or Valuable variables');
+    // Check if file is encrypted
+    if (rawData.__encrypted) {
+      // Ask for export PIN to decrypt
+      openImportPasswordModal(rawData);
       return;
     }
 
-    const conflicts = [];
-
-    // Check Command Sets conflicts
-    Object.entries(incomingSets).forEach(([appKey, appObj]) => {
-      if (commandSets[appKey]) {
-        conflicts.push({
-          type: 'app',
-          key: appKey,
-          name: appObj.name || appKey,
-          incomingData: appObj,
-          existingData: commandSets[appKey],
-        });
-      }
-    });
-
-    // Check Variables conflicts
-    incomingVars.forEach((v) => {
-      const existing = variables.find((item) => item.key.toLowerCase() === v.key.toLowerCase());
-      if (existing) {
-        conflicts.push({
-          type: 'var',
-          key: v.key,
-          name: `{${v.key}} - ${v.label || v.key}`,
-          incomingData: v,
-          existingData: existing,
-        });
-      }
-    });
-
-    if (incomingView) {
-      viewConfig = { ...viewConfig, ...incomingView };
-      applyViewConfig(viewConfig);
-      persistViewConfig();
-    }
-
-    if (conflicts.length === 0) {
-      applyImportData(incomingSets, incomingVars, {});
-      showToast('Settings imported successfully!');
-    } else {
-      openConflictModal(incomingSets, incomingVars, conflicts);
-    }
+    processImportData(rawData);
   } catch (err) {
     showToast(`Import error: ${err.message}`);
+  }
+}
+
+function processImportData(data) {
+  const incomingSets = data.commandSets || {};
+  const incomingVars = Array.isArray(data.variables) ? data.variables : [];
+  const incomingView = data.viewConfig || null;
+
+  if (Object.keys(incomingSets).length === 0 && incomingVars.length === 0) {
+    showToast('The selected file does not contain any Command Sets or Variables');
+    return;
+  }
+
+  const conflicts = [];
+
+  // Check Command Sets conflicts
+  Object.entries(incomingSets).forEach(([appKey, appObj]) => {
+    if (commandSets[appKey]) {
+      conflicts.push({ type: 'app', key: appKey, name: appObj.name || appKey, incomingData: appObj, existingData: commandSets[appKey] });
+    }
+  });
+
+  // Check Variables conflicts
+  incomingVars.forEach((v) => {
+    const existing = variables.find((item) => item.key.toLowerCase() === v.key.toLowerCase());
+    if (existing) {
+      conflicts.push({ type: 'var', key: v.key, name: `{${v.key}} - ${v.label || v.key}`, incomingData: v, existingData: existing });
+    }
+  });
+
+  if (incomingView) {
+    viewConfig = { ...viewConfig, ...incomingView };
+    applyViewConfig(viewConfig);
+    persistViewConfig();
+  }
+
+  if (conflicts.length === 0) {
+    applyImportData(incomingSets, incomingVars, {});
+    showToast('Settings imported successfully!');
+  } else {
+    openConflictModal(incomingSets, incomingVars, conflicts);
   }
 }
 
@@ -1826,7 +1838,7 @@ function deleteCommandForm() {
 }
 
 // =========================================================
-// Valuable (Variables) Manager
+// Variables Manager
 // =========================================================
 
 function getVariableUsageMap() {
@@ -1880,6 +1892,7 @@ function renderVariablesManager() {
     const originalIndex = variables.findIndex((item) => item.key === v.key);
     const card = document.createElement('div');
     card.className = 'var-card';
+    if (v.hidden) card.style.outline = '1px solid var(--signal, #5eead4)';
 
     const header = document.createElement('div');
     header.className = 'var-card-header';
@@ -1891,11 +1904,49 @@ function renderVariablesManager() {
 
     const actions = document.createElement('div');
     actions.className = 'var-card-actions';
+    actions.style.cssText = 'display:flex;gap:4px;align-items:center;';
 
+    // System badge
+    if (v.system) {
+      const sysBadge = document.createElement('span');
+      sysBadge.textContent = v.formula ? '⚙ auto' : '⚙ const';
+      sysBadge.style.cssText = 'font-size:9px;opacity:0.6;padding:1px 4px;border-radius:3px;background:var(--bg-surface);';
+      sysBadge.title = v.formula ? `Formula: ${v.formula}` : `Default: ${v.default_value || ''}`;
+      actions.appendChild(sysBadge);
+    }
+
+    // Lock toggle button
+    const lockBtn = document.createElement('button');
+    lockBtn.className = 'btn btn--ghost btn--xs';
+    lockBtn.title = v.locked ? 'Locked (click to unlock)' : 'Unlocked (click to lock)';
+    lockBtn.textContent = v.locked ? String.fromCodePoint(0x1F512) : String.fromCodePoint(0x1F513);
+    lockBtn.addEventListener('click', () => {
+      variables[originalIndex] = { ...variables[originalIndex], locked: !v.locked };
+      persistVariables();
+      renderVariablesManager();
+    });
+    actions.appendChild(lockBtn);
+
+    // Hidden badge
+    if (v.hidden) {
+      const hidBadge = document.createElement('span');
+      hidBadge.textContent = String.fromCodePoint(0x1F510);
+      hidBadge.title = 'Hidden — admin password required to edit';
+      hidBadge.style.cssText = 'font-size:12px;';
+      actions.appendChild(hidBadge);
+    }
+
+    // Edit button
     const editBtn = document.createElement('button');
     editBtn.className = 'btn btn--ghost btn--xs';
     editBtn.textContent = 'Edit';
-    editBtn.addEventListener('click', () => openVariableForm(originalIndex));
+    editBtn.addEventListener('click', () => {
+      if (v.hidden) {
+        requireAdminPassword('Edit Hidden Variable', () => openVariableForm(originalIndex));
+      } else {
+        openVariableForm(originalIndex);
+      }
+    });
     actions.appendChild(editBtn);
 
     header.appendChild(actions);
@@ -1904,6 +1955,8 @@ function renderVariablesManager() {
     const labelSpan = document.createElement('span');
     labelSpan.className = 'var-card-label';
     labelSpan.textContent = v.label || v.key;
+    if (v.hidden) labelSpan.textContent += ' 🔐';
+    if (v.locked) labelSpan.textContent += ' 🔒';
     card.appendChild(labelSpan);
 
     if (v.description) {
@@ -1913,12 +1966,19 @@ function renderVariablesManager() {
       card.appendChild(descSpan);
     }
 
+    if (v.default_value) {
+      const defSpan = document.createElement('span');
+      defSpan.className = 'var-card-desc';
+      defSpan.style.color = 'var(--text-dim)';
+      defSpan.textContent = `Default: ${v.default_value}`;
+      card.appendChild(defSpan);
+    }
+
     const usages = usageMap.get(v.key);
     const usageSpan = document.createElement('span');
     usageSpan.className = 'var-card-desc';
     usageSpan.style.color = 'var(--text-muted)';
     usageSpan.style.marginTop = '2px';
-
     if (usages && usages.size > 0) {
       usageSpan.textContent = `Used in: ${Array.from(usages).slice(0, 3).join(', ')}${usages.size > 3 ? ` (+${usages.size - 3} more)` : ''}`;
     } else {
@@ -1947,7 +2007,7 @@ function openNewVariableModal() {
 function openVariableForm(index) {
   editingVarIndex = index;
   const isNew = index === null;
-  const v = isNew ? { key: '', label: '', description: '' } : variables[index];
+  const v = isNew ? { key: '', label: '', description: '', default_value: '', locked: false, hidden: false } : variables[index];
 
   document.getElementById('varFormTitle').textContent = isNew ? 'Add Variable' : 'Edit Variable';
   const keyInput = document.getElementById('vfKey');
@@ -1956,6 +2016,9 @@ function openVariableForm(index) {
 
   document.getElementById('vfLabel').value = v.label || '';
   document.getElementById('vfDescription').value = v.description || '';
+  document.getElementById('vfDefaultValue').value = v.default_value || '';
+  document.getElementById('vfLocked').checked = Boolean(v.locked);
+  document.getElementById('vfHidden').checked = Boolean(v.hidden);
   document.getElementById('vfDelete').style.display = isNew ? 'none' : 'inline-flex';
 
   document.getElementById('varFormModal').classList.remove('modal-overlay--hidden');
@@ -1972,47 +2035,244 @@ function saveVariableForm() {
   const rawKey = document.getElementById('vfKey').value.trim();
   const label = document.getElementById('vfLabel').value.trim();
   const description = document.getElementById('vfDescription').value.trim();
+  const default_value = document.getElementById('vfDefaultValue').value.trim();
+  const locked = document.getElementById('vfLocked').checked;
+  const hidden = document.getElementById('vfHidden').checked;
 
-  if (!rawKey) {
-    showToast('Variable key is required');
-    return;
-  }
-
+  if (!rawKey) { showToast('Variable key is required'); return; }
   const key = rawKey.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-  if (!label) {
-    showToast('Field label is required');
-    return;
-  }
+  if (!label) { showToast('Field label is required'); return; }
 
-  const isNew = editingVarIndex === null;
+  const doSave = () => {
+    const isNew = editingVarIndex === null;
+    const varObj = { key, label, description, ...(default_value ? { default_value } : {}), ...(locked ? { locked } : {}), ...(hidden ? { hidden, locked: true } : {}) };
 
-  if (isNew) {
-    if (variables.some((v) => v.key.toLowerCase() === key)) {
-      showToast(`Variable key "${key}" already exists`);
-      return;
+    if (isNew) {
+      if (variables.some((v) => v.key.toLowerCase() === key)) {
+        showToast(`Variable key "${key}" already exists`);
+        return;
+      }
+      variables.push(varObj);
+    } else {
+      variables[editingVarIndex] = { ...variables[editingVarIndex], ...varObj, key: variables[editingVarIndex].key };
     }
-    variables.push({ key, label, description });
-  } else {
-    variables[editingVarIndex] = {
-      key: variables[editingVarIndex].key,
-      label,
-      description,
-    };
-  }
 
-  persistVariables();
-  closeVariableForm();
-  renderVariablesManager();
+    persistVariables();
+    closeVariableForm();
+    renderVariablesManager();
+  };
+
+  // If trying to create/edit a hidden variable, require admin password
+  if (hidden) {
+    requireAdminPassword(editingVarIndex === null ? 'Create Hidden Variable' : 'Save Hidden Variable', doSave);
+  } else {
+    doSave();
+  }
 }
 
 function deleteVariableForm() {
   if (editingVarIndex === null) return;
   const v = variables[editingVarIndex];
 
-  if (!confirm(`Delete variable "{${v.key}}"?`)) return;
+  const doDelete = () => {
+    if (!confirm(`Delete variable "{${v.key}}"?`)) return;
+    variables.splice(editingVarIndex, 1);
+    persistVariables();
+    closeVariableForm();
+    renderVariablesManager();
+  };
 
-  variables.splice(editingVarIndex, 1);
-  persistVariables();
-  closeVariableForm();
-  renderVariablesManager();
+  if (v.hidden) {
+    requireAdminPassword('Delete Hidden Variable', doDelete);
+  } else {
+    doDelete();
+  }
+}
+
+// =============================================================
+// ADMIN PASSWORD MODAL
+// =============================================================
+
+function initAdminPasswordModal() {
+  document.getElementById('adminPwCancel').addEventListener('click', closeAdminPasswordModal);
+  document.getElementById('adminPasswordModal').addEventListener('click', (e) => {
+    if (e.target.id === 'adminPasswordModal') closeAdminPasswordModal();
+  });
+  document.getElementById('adminPwConfirmBtn').addEventListener('click', confirmAdminPassword);
+  document.getElementById('adminPwInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmAdminPassword();
+  });
+}
+
+/**
+ * Require admin password before running a callback.
+ * If admin password has never been set, guide user through first-time setup.
+ */
+function requireAdminPassword(actionLabel, callback) {
+  adminAuthCallback = callback;
+  const msgEl = document.getElementById('adminPwMessage');
+  const setupNote = document.getElementById('adminPwSetupNote');
+  const titleEl = document.getElementById('adminPwTitle');
+  titleEl.textContent = `🔐 ${actionLabel}`;
+  msgEl.textContent = adminIsSetup
+    ? 'Enter admin password to continue.'
+    : 'No admin password set yet. Create one now.';
+  setupNote.style.display = adminIsSetup ? 'none' : 'block';
+  document.getElementById('adminPwInput').value = '';
+  document.getElementById('adminPwError').style.display = 'none';
+  if (document.getElementById('adminPwConfirm')) document.getElementById('adminPwConfirm').value = '';
+  document.getElementById('adminPasswordModal').classList.remove('modal-overlay--hidden');
+  setTimeout(() => document.getElementById('adminPwInput').focus(), 50);
+}
+
+function closeAdminPasswordModal() {
+  document.getElementById('adminPasswordModal').classList.add('modal-overlay--hidden');
+  adminAuthCallback = null;
+}
+
+async function confirmAdminPassword() {
+  const password = document.getElementById('adminPwInput').value;
+  const errEl = document.getElementById('adminPwError');
+  errEl.style.display = 'none';
+
+  // Validate: alphanumeric only, 6+ chars
+  if (!/^[a-zA-Z0-9]{6,}$/.test(password)) {
+    errEl.textContent = 'Password must be at least 6 alphanumeric characters.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  if (!adminIsSetup) {
+    // First-time: verify confirmation matches
+    const confirm = document.getElementById('adminPwConfirm').value;
+    if (password !== confirm) {
+      errEl.textContent = 'Passwords do not match.';
+      errEl.style.display = 'block';
+      return;
+    }
+    // Hash and store the new admin password
+    const { hash, salt } = await hashPassword(password);
+    await window.feMacro.storeSet('adminPwHash', hash);
+    await window.feMacro.storeSet('adminPwSalt', salt);
+    adminIsSetup = true;
+    closeAdminPasswordModal();
+    if (adminAuthCallback) adminAuthCallback();
+    adminAuthCallback = null;
+  } else {
+    // Verify existing password
+    const storedHash = await window.feMacro.storeGet('adminPwHash', null);
+    const storedSalt = await window.feMacro.storeGet('adminPwSalt', null);
+    const ok = storedHash && storedSalt ? await verifyPassword(password, storedHash, storedSalt) : false;
+    if (!ok) {
+      errEl.textContent = 'Incorrect password. Try again.';
+      errEl.style.display = 'block';
+      document.getElementById('adminPwInput').value = '';
+      document.getElementById('adminPwInput').focus();
+      return;
+    }
+    closeAdminPasswordModal();
+    if (adminAuthCallback) adminAuthCallback();
+    adminAuthCallback = null;
+  }
+}
+
+// =============================================================
+// EXPORT PASSWORD MODAL
+// =============================================================
+
+function initExportPasswordModal() {
+  document.getElementById('exportPwCancel').addEventListener('click', closeExportPasswordModal);
+  document.getElementById('exportPasswordModal').addEventListener('click', (e) => {
+    if (e.target.id === 'exportPasswordModal') closeExportPasswordModal();
+  });
+  document.getElementById('exportPwConfirmBtn').addEventListener('click', confirmExportPassword);
+}
+
+function openExportPasswordModal() {
+  document.getElementById('exportPwInput').value = '';
+  document.getElementById('exportPwConfirm').value = '';
+  document.getElementById('exportPwError').style.display = 'none';
+  document.getElementById('exportPasswordModal').classList.remove('modal-overlay--hidden');
+  setTimeout(() => document.getElementById('exportPwInput').focus(), 50);
+}
+
+function closeExportPasswordModal() {
+  document.getElementById('exportPasswordModal').classList.add('modal-overlay--hidden');
+  pendingExportPayload = null;
+}
+
+async function confirmExportPassword() {
+  const pin = document.getElementById('exportPwInput').value;
+  const pinConfirm = document.getElementById('exportPwConfirm').value;
+  const errEl = document.getElementById('exportPwError');
+  errEl.style.display = 'none';
+
+  if (!/^\d{6}$/.test(pin) || pin !== pinConfirm) {
+    errEl.style.display = 'block';
+    return;
+  }
+
+  if (!pendingExportPayload) { closeExportPasswordModal(); return; }
+
+  try {
+    const encrypted = await encryptPayload(pendingExportPayload, pin);
+    const res = await window.feMacro.exportConfig(encrypted);
+    if (res.ok) {
+      showToast('Settings exported & encrypted successfully!');
+    } else if (res.error) {
+      showToast(`Export failed: ${res.error}`);
+    }
+  } catch (err) {
+    showToast(`Encrypt/Export error: ${err.message}`);
+  }
+
+  closeExportPasswordModal();
+}
+
+// =============================================================
+// IMPORT PASSWORD MODAL
+// =============================================================
+
+let pendingEncryptedImport = null;
+
+function initImportPasswordModal() {
+  document.getElementById('importPwCancel').addEventListener('click', closeImportPasswordModal);
+  document.getElementById('importPasswordModal').addEventListener('click', (e) => {
+    if (e.target.id === 'importPasswordModal') closeImportPasswordModal();
+  });
+  document.getElementById('importPwConfirmBtn').addEventListener('click', confirmImportPassword);
+  document.getElementById('importPwInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmImportPassword();
+  });
+}
+
+function openImportPasswordModal(encryptedData) {
+  pendingEncryptedImport = encryptedData;
+  document.getElementById('importPwInput').value = '';
+  document.getElementById('importPwError').style.display = 'none';
+  document.getElementById('importPasswordModal').classList.remove('modal-overlay--hidden');
+  setTimeout(() => document.getElementById('importPwInput').focus(), 50);
+}
+
+function closeImportPasswordModal() {
+  document.getElementById('importPasswordModal').classList.add('modal-overlay--hidden');
+  pendingEncryptedImport = null;
+}
+
+async function confirmImportPassword() {
+  const pin = document.getElementById('importPwInput').value;
+  const errEl = document.getElementById('importPwError');
+  errEl.style.display = 'none';
+
+  if (!pendingEncryptedImport) { closeImportPasswordModal(); return; }
+
+  try {
+    const decrypted = await decryptPayload(pendingEncryptedImport, pin);
+    closeImportPasswordModal();
+    processImportData(decrypted);
+  } catch {
+    errEl.style.display = 'block';
+    document.getElementById('importPwInput').value = '';
+    document.getElementById('importPwInput').focus();
+  }
 }

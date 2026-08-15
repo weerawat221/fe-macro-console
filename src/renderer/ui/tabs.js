@@ -114,7 +114,17 @@ export function selectTab(tabId) {
 export function clearInputs() {
   const tab = getActiveTab();
   if (!tab) return;
-  tab.values = {};
+
+  // Preserve values of locked variables
+  const lockedKeys = new Set(
+    (state.variables || []).filter((v) => v.locked).map((v) => v.key)
+  );
+  const preserved = {};
+  Object.entries(tab.values || {}).forEach(([k, val]) => {
+    if (lockedKeys.has(k)) preserved[k] = val;
+  });
+
+  tab.values = preserved;
   tab.name = 'New Tab';
   setState({ tabs: [...state.tabs] });
   renderTabBar();

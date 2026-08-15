@@ -465,9 +465,12 @@ ipcMain.handle('file:exportConfig', async (_evt, data) => {
   const win = BrowserWindow.getFocusedWindow();
   const dateStr = new Date().toISOString().slice(0, 10);
   const res = await dialog.showSaveDialog(win, {
-    title: 'Export Settings (Command sets & Valuable)',
+    title: 'Export Settings (Command Sets & Variables)',
     defaultPath: `fe-macro-settings-${dateStr}.json`,
-    filters: [{ name: 'JSON Config Files (*.json)', extensions: ['json'] }],
+    filters: [
+      { name: 'Encrypted Config (*.femac)', extensions: ['femac'] },
+      { name: 'JSON Config Files (*.json)', extensions: ['json'] },
+    ],
   });
 
   if (res.canceled || !res.filePath) {
@@ -485,9 +488,13 @@ ipcMain.handle('file:exportConfig', async (_evt, data) => {
 ipcMain.handle('file:importConfig', async () => {
   const win = BrowserWindow.getFocusedWindow();
   const res = await dialog.showOpenDialog(win, {
-    title: 'Import Settings (Command sets & Valuable)',
+    title: 'Import Settings (Command Sets & Variables)',
     properties: ['openFile'],
-    filters: [{ name: 'JSON Config Files (*.json)', extensions: ['json'] }],
+    filters: [
+      { name: 'Config Files (*.femac, *.json)', extensions: ['femac', 'json'] },
+      { name: 'Encrypted Config (*.femac)', extensions: ['femac'] },
+      { name: 'JSON Config Files (*.json)', extensions: ['json'] },
+    ],
   });
 
   if (res.canceled || !res.filePaths || res.filePaths.length === 0) {
