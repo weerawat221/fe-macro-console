@@ -127,11 +127,11 @@ export function updateFieldFilterButton() {
   const filterBtn = document.getElementById('btnToggleFieldFilter');
   if (!filterBtn) return;
   if (state.showAllFields) {
-    filterBtn.textContent = 'ALL';
+    filterBtn.innerHTML = '<i class="fa-solid fa-filter"></i> ALL';
     filterBtn.className = 'btn btn--primary btn--sm';
     filterBtn.title = 'Showing All Fields (Click to show only used fields)';
   } else {
-    filterBtn.textContent = 'USED';
+    filterBtn.innerHTML = '<i class="fa-solid fa-filter"></i> USED';
     filterBtn.className = 'btn btn--ghost btn--sm';
     filterBtn.title = 'Showing Used Fields Only (Click to show all fields)';
   }

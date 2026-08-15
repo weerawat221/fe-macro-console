@@ -347,7 +347,7 @@ function renderViewSettings() {
     if (preset.isCustom) {
       const delBtn = document.createElement('span');
       delBtn.className = 'theme-preset-del';
-      delBtn.innerHTML = '&times;';
+      delBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
       delBtn.title = 'Delete this custom theme';
       delBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -956,7 +956,7 @@ function renderEditorNav() {
 
     const del = document.createElement('span');
     del.className = 'editor-mode-item-del';
-    del.innerHTML = '&times;';
+    del.innerHTML = '<i class="fa-solid fa-xmark"></i>';
     del.title = 'Delete this command set';
     del.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1047,7 +1047,7 @@ function renderEditorProcs() {
 
     const del = document.createElement('span');
     del.className = 'editor-proc-del';
-    del.innerHTML = '&times;';
+    del.innerHTML = '<i class="fa-solid fa-xmark"></i>';
     del.title = `Remove ${procName} from this set`;
     del.addEventListener('click', () => {
       removeProcFromSet(procName);
@@ -1182,7 +1182,7 @@ function renderEditorSubmodes() {
     if (subKeys.length > 1) {
       const del = document.createElement('span');
       del.className = 'editor-submode-del';
-      del.innerHTML = '&times;';
+      del.innerHTML = '<i class="fa-solid fa-xmark"></i>';
       del.title = 'Delete sub-mode';
       del.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1357,7 +1357,7 @@ function renderEditorGroups() {
 
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn--icon';
-    delBtn.innerHTML = '&times;';
+    delBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
     delBtn.title = 'Delete group';
     delBtn.addEventListener('click', () => deleteGroup(groupTitle));
     actions.appendChild(delBtn);
@@ -1481,7 +1481,7 @@ function renderEditorGroups() {
 
     const addRow = document.createElement('div');
     addRow.className = 'editor-add-cmd';
-    addRow.textContent = '+ Add command';
+    addRow.innerHTML = '<i class="fa-solid fa-plus"></i> Add command';
     addRow.addEventListener('click', () => openCommandForm(appKey, subKey, groupTitle, null));
     block.appendChild(addRow);
 
@@ -1903,8 +1903,8 @@ function renderVariablesManager() {
     // Formula badge
     if (v.formula) {
       const fBadge = document.createElement('span');
-      fBadge.textContent = '📐 formula';
-      fBadge.style.cssText = 'font-size:9px;color:var(--signal, #5eead4);padding:1px 4px;border-radius:3px;background:rgba(94,234,212,0.1);';
+      fBadge.innerHTML = '<i class="fa-solid fa-calculator" style="margin-right:3px;"></i> formula';
+      fBadge.style.cssText = 'font-size:9px;color:var(--signal, #5eead4);padding:1px 4px;border-radius:3px;background:rgba(94,234,212,0.1);display:inline-flex;align-items:center;';
       fBadge.title = v.formula;
       actions.appendChild(fBadge);
     }
@@ -1912,8 +1912,8 @@ function renderVariablesManager() {
     // System badge
     if (v.system) {
       const sysBadge = document.createElement('span');
-      sysBadge.textContent = v.formula ? '⚙ auto' : '⚙ const';
-      sysBadge.style.cssText = 'font-size:9px;opacity:0.6;padding:1px 4px;border-radius:3px;background:var(--bg-surface);';
+      sysBadge.innerHTML = v.formula ? '<i class="fa-solid fa-gear" style="margin-right:2px;"></i> auto' : '<i class="fa-solid fa-gear" style="margin-right:2px;"></i> const';
+      sysBadge.style.cssText = 'font-size:9px;opacity:0.6;padding:1px 4px;border-radius:3px;background:var(--bg-surface);display:inline-flex;align-items:center;';
       sysBadge.title = v.formula ? `Formula: ${v.formula}` : `Default: ${v.default_value || ''}`;
       actions.appendChild(sysBadge);
     }
@@ -1922,7 +1922,7 @@ function renderVariablesManager() {
     const lockBtn = document.createElement('button');
     lockBtn.className = 'btn btn--ghost btn--xs';
     lockBtn.title = v.locked ? 'Locked (click to unlock)' : 'Unlocked (click to lock)';
-    lockBtn.textContent = v.locked ? String.fromCodePoint(0x1F512) : String.fromCodePoint(0x1F513);
+    lockBtn.innerHTML = v.locked ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-lock-open"></i>';
     lockBtn.addEventListener('click', () => {
       variables[originalIndex] = { ...variables[originalIndex], locked: !v.locked };
       persistVariables();
@@ -1933,16 +1933,16 @@ function renderVariablesManager() {
     // Hidden badge
     if (v.hidden) {
       const hidBadge = document.createElement('span');
-      hidBadge.textContent = String.fromCodePoint(0x1F510);
+      hidBadge.innerHTML = '<i class="fa-solid fa-key" style="color:var(--signal);font-size:11px;"></i>';
       hidBadge.title = 'Hidden — admin password required to edit';
-      hidBadge.style.cssText = 'font-size:12px;';
+      hidBadge.style.cssText = 'display:inline-flex;align-items:center;';
       actions.appendChild(hidBadge);
     }
 
     // Edit button
     const editBtn = document.createElement('button');
     editBtn.className = 'btn btn--ghost btn--xs';
-    editBtn.textContent = 'Edit';
+    editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Edit';
     editBtn.addEventListener('click', () => {
       if (v.hidden) {
         requireAdminPassword('Edit Hidden Variable', () => openVariableForm(originalIndex));
@@ -1958,8 +1958,8 @@ function renderVariablesManager() {
     const labelSpan = document.createElement('span');
     labelSpan.className = 'var-card-label';
     labelSpan.textContent = v.label || v.key;
-    if (v.hidden) labelSpan.textContent += ' 🔐';
-    if (v.locked) labelSpan.textContent += ' 🔒';
+    if (v.hidden) labelSpan.innerHTML += ' <i class="fa-solid fa-key" style="font-size:11px;color:var(--signal);margin-left:3px;"></i>';
+    if (v.locked) labelSpan.innerHTML += ' <i class="fa-solid fa-lock" style="font-size:11px;color:var(--text-dim);margin-left:3px;"></i>';
     card.appendChild(labelSpan);
 
     if (v.description) {
@@ -2040,7 +2040,7 @@ function openVariableForm(index) {
 
       if (dependents.length > 0) {
         depInfo.style.display = 'block';
-        depInfo.innerHTML = `⚠️ <strong>${dependents.length} variable(s)</strong> depend on this: ${dependents.map((d) => `<code>{${d.key}}</code>`).join(', ')}`;
+        depInfo.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b;margin-right:4px;"></i> <strong>${dependents.length} variable(s)</strong> depend on this: ${dependents.map((d) => `<code>{${d.key}}</code>`).join(', ')}`;
       } else {
         depInfo.style.display = 'none';
       }
@@ -2486,7 +2486,7 @@ async function requireAdminPassword(actionLabel, callback) {
   const msgEl = document.getElementById('adminPwMessage');
   const setupNote = document.getElementById('adminPwSetupNote');
   const titleEl = document.getElementById('adminPwTitle');
-  if (titleEl) titleEl.textContent = `🔐 ${actionLabel}`;
+  if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-shield-halved" style="color:var(--signal);margin-right:6px;"></i> ${actionLabel}`;
   if (msgEl) {
     msgEl.textContent = adminIsSetup
       ? 'Enter admin password to continue.'

@@ -257,7 +257,7 @@ export function renderTabBar() {
     // Close button 'x' inside tab
     const closeBtn = document.createElement('button');
     closeBtn.className = 'tab-chip-close';
-    closeBtn.innerHTML = '&times;';
+    closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
     closeBtn.title = 'Close tab';
     closeBtn.addEventListener('click', (e) => {
       e.stopPropagation();

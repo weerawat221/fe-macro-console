@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Screen OCR — Auto Valuable Input</title>
+  <title>Screen OCR — Auto Variable Input</title>
+  <link rel="stylesheet" href="../../assets/fontawesome/css/all.min.css" />
   <link rel="stylesheet" href="ocrOverlay.css" />
 </head>
 <body>
@@ -31,20 +32,20 @@
       </div>
       <div class="ocr-top-right">
         <button id="btnQuickRecall" class="btn btn--recall" style="display:none;" title="Re-apply last saved capture positions (Space)">
-          ⚡ Auto-Fill Last Position
+          <i class="fa-solid fa-bolt"></i> Auto-Fill Last Position
         </button>
-        <button id="btnCancelTop" class="btn btn--ghost btn--icon" title="Cancel (Esc)">✕</button>
+        <button id="btnCancelTop" class="btn btn--ghost btn--icon" title="Cancel (Esc)"><i class="fa-solid fa-xmark"></i></button>
       </div>
     </header>
 
-    <!-- Floating Popover for assigning selected text to Valuable -->
+    <!-- Floating Popover for assigning selected text to Variable -->
     <div id="varPopover" class="var-popover" style="display:none;">
       <div class="var-popover-header">
         <span class="var-popover-title">Selected Text (Editable):</span>
         <input type="text" id="popoverSelectedTextInput" class="var-popover-text-input" spellcheck="false" autocomplete="off" />
       </div>
       <div class="var-popover-search-wrap">
-        <input type="text" id="popoverSearch" class="var-popover-search" placeholder="Search / Filter Valuable..." autocomplete="off" />
+        <input type="text" id="popoverSearch" class="var-popover-search" placeholder="Search / Filter Variable..." autocomplete="off" />
       </div>
       <div id="varPopoverList" class="var-popover-list"></div>
     </div>
@@ -52,7 +53,7 @@
     <!-- Floating Bottom Action Bar -->
     <footer class="ocr-bottom-bar" id="bottomBar" style="display:none;">
       <div class="ocr-bottom-left">
-        <button id="btnReselectArea" class="btn btn--ghost btn--sm">✂️ Select New Area</button>
+        <button id="btnReselectArea" class="btn btn--ghost btn--sm"><i class="fa-solid fa-crop-simple"></i> Select New Area</button>
         <label class="ocr-checkbox-label">
           <input type="checkbox" id="chkRememberPos" checked />
           <span>Save positions for auto-input next time</span>
@@ -61,7 +62,7 @@
       <div class="ocr-bottom-right">
         <button id="btnCancelBottom" class="btn btn--ghost btn--sm">Cancel (Esc)</button>
         <button id="btnApplyValues" class="btn btn--primary btn--sm" disabled>
-          ✔ Apply to Macro (0)
+          <i class="fa-solid fa-check"></i> Apply to Macro (0)
         </button>
       </div>
     </footer>

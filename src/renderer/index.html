@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FE Macro Console</title>
+  <link rel="stylesheet" href="../../assets/fontawesome/css/all.min.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -14,7 +15,7 @@
     <div class="tab-bar-container">
       <div id="tabScrollWrapper" class="tab-scroll-wrapper">
         <div id="tabList" class="tab-list" role="tablist" aria-label="Workspace tabs"></div>
-        <button id="btnNewTab" class="tab-add-btn" title="Add new workspace tab">+</button>
+        <button id="btnNewTab" class="tab-add-btn" title="Add new workspace tab"><i class="fa-solid fa-plus"></i></button>
       </div>
     </div>
 
@@ -32,13 +33,11 @@
             <span id="autoMoverTimer" style="font-size:9px;color:var(--text-dim);margin-left:2px;"></span>
           </button>
           <button id="btnOcrCapture" class="btn btn--ghost btn--icon" title="Auto Variable Input OCR (Alt+Shift+S)">
-            <svg class="btn-icon-svg" viewBox="0 0 448 512" width="13" height="13" fill="currentColor">
-              <path d="M64 32C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V96c0-35.3-28.7-64-64-64H64zM32 96c0-17.7 14.3-32 32-32H384c17.7 0 32 14.3 32 32V416c0 17.7-14.3 32-32 32H64c-17.7 0-32-14.3-32-32V96zm112 64c-8.8 0-16 7.2-16 16s7.2 16 16 16h64v144c0 8.8 7.2 16 16 16s16-7.2 16-16V192h64c8.8 0 16-7.2 16-16s-7.2-16-16-16H144z"/>
-            </svg>
+            <i class="fa-solid fa-crop-simple"></i>
           </button>
-          <button id="btnEditMode" class="btn btn--ghost btn--sm" title="Open Settings">Setting</button>
-          <button id="btnToggleFieldFilter" class="btn btn--ghost btn--sm" title="Toggle: Show All Fields vs Used Only">USED</button>
-          <button id="btnClearInputs" class="btn btn--danger-ghost btn--icon" title="Clear all fields in current tab">✕</button>
+          <button id="btnEditMode" class="btn btn--ghost btn--sm" title="Open Settings"><i class="fa-solid fa-gear"></i> Setting</button>
+          <button id="btnToggleFieldFilter" class="btn btn--ghost btn--sm" title="Toggle: Show All Fields vs Used Only"><i class="fa-solid fa-filter"></i> <span id="toggleFilterText">USED</span></button>
+          <button id="btnClearInputs" class="btn btn--danger-ghost btn--icon" title="Clear all fields in current tab"><i class="fa-solid fa-xmark"></i></button>
         </div>
       </div>
       <div id="errorBanner" class="error-banner" role="alert"></div>
@@ -77,22 +76,18 @@
           <h2 id="editorModalTitle">Setting</h2>
           <!-- Top navbar: Command Sets vs Variables -->
           <nav class="editor-top-nav" role="tablist">
-            <button id="tabNavApps" class="editor-top-tab editor-top-tab--active" role="tab" aria-selected="true">Command Sets (Apps)</button>
-            <button id="tabNavVariables" class="editor-top-tab" role="tab" aria-selected="false">Variables</button>
+            <button id="tabNavApps" class="editor-top-tab editor-top-tab--active" role="tab" aria-selected="true"><i class="fa-solid fa-layer-group"></i> Command Sets (Apps)</button>
+            <button id="tabNavVariables" class="editor-top-tab" role="tab" aria-selected="false"><i class="fa-solid fa-code"></i> Variables</button>
           </nav>
         </div>
           <!-- Small Import / Export Icon Buttons -->
-          <button id="btnExportConfig" class="btn btn--ghost btn--icon" title="Export All Settings (arrow-up-to-line)">
-            <svg class="btn-icon-svg" viewBox="0 0 384 512" width="13" height="13" fill="currentColor">
-              <path d="M214.6 153.4c-12.5-12.5-32.8-12.5-45.3 0l-128 128c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 253.3V448c0 17.7 14.3 32 32 32s32-14.3 32-32V253.3l73.4 73.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-128-128zM352 64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32C14.3 0 0 14.3 0 32s14.3 32 32 32h320z"/>
-            </svg>
+          <button id="btnExportConfig" class="btn btn--ghost btn--icon" title="Export All Settings">
+            <i class="fa-solid fa-file-export"></i>
           </button>
-          <button id="btnImportConfig" class="btn btn--ghost btn--icon" title="Import Settings (arrow-down-to-line)">
-            <svg class="btn-icon-svg" viewBox="0 0 384 512" width="13" height="13" fill="currentColor">
-              <path d="M169.4 358.6c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 258.7V64c0-17.7-14.3-32-32-32s-32 14.3-32 32v194.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128zM32 448c-17.7 0-32 14.3-32 32s14.3 32 32 32h320c17.7 0 32-14.3 32-32s-14.3-32-32-32H32z"/>
-            </svg>
+          <button id="btnImportConfig" class="btn btn--ghost btn--icon" title="Import Settings">
+            <i class="fa-solid fa-file-import"></i>
           </button>
-          <button id="editorClose" class="btn btn--icon" title="Close">×</button>
+          <button id="editorClose" class="btn btn--icon" title="Close"><i class="fa-solid fa-xmark"></i></button>
         </div>
       </div>
 
@@ -101,7 +96,7 @@
         <nav class="editor-nav">
           <div class="editor-nav-label">Command sets (Apps)</div>
           <div id="editorModeList" class="editor-mode-list"></div>
-          <button id="btnAddMode" class="btn btn--ghost btn--sm editor-add-mode">+ New set</button>
+          <button id="btnAddMode" class="btn btn--ghost btn--sm editor-add-mode"><i class="fa-solid fa-plus"></i> New set</button>
         </nav>
 
         <div class="editor-main">
@@ -109,19 +104,19 @@
           <div class="editor-procs-bar" id="editorProcsBar">
             <div class="editor-procs-label">Programs:</div>
             <div class="editor-procs-list" id="editorProcsList"></div>
-            <button id="btnAddProcToSet" class="btn btn--ghost btn--xs" title="Add running program to this command set">+ Add Program</button>
+            <button id="btnAddProcToSet" class="btn btn--ghost btn--xs" title="Add running program to this command set"><i class="fa-solid fa-plus"></i> Add Program</button>
           </div>
 
           <!-- Submode bar in editor -->
           <div class="editor-submode-bar" id="editorSubmodeBar">
             <div class="editor-submode-label">Sub-modes:</div>
             <div class="editor-submode-list" id="editorSubmodeList"></div>
-            <button id="btnAddSubmode" class="btn btn--ghost btn--xs" title="Add sub-macro set">+ Sub-mode</button>
+            <button id="btnAddSubmode" class="btn btn--ghost btn--xs" title="Add sub-macro set"><i class="fa-solid fa-plus"></i> Sub-mode</button>
           </div>
 
           <div class="editor-main-header">
             <input id="editorGroupTitle" class="editor-group-title-input" placeholder="Group name (e.g. AP Monitoring)" />
-            <button id="btnAddGroup" class="btn btn--ghost btn--sm">+ Group</button>
+            <button id="btnAddGroup" class="btn btn--ghost btn--sm"><i class="fa-solid fa-folder-plus"></i> Group</button>
           </div>
           <div id="editorGroups" class="editor-groups"></div>
         </div>
@@ -131,12 +126,12 @@
       <div id="editorViewVariables" class="editor-body editor-body--column" style="display:none;">
         <div class="var-manager-header">
           <div class="var-manager-info">
-            <span class="var-manager-title">Valuable (Variables &amp; Tokens)</span>
+            <span class="var-manager-title">Variables &amp; Tokens</span>
             <span class="var-manager-desc">Manage all variable tokens used for text input fields and macro command templates.</span>
           </div>
           <div class="var-manager-actions">
             <input id="varSearchInput" class="form-input var-search-input" placeholder="Search variables…" />
-            <button id="btnAddVariable" class="btn btn--primary btn--sm">+ Add Variable</button>
+            <button id="btnAddVariable" class="btn btn--primary btn--sm"><i class="fa-solid fa-plus"></i> Add Variable</button>
           </div>
         </div>
         <div class="var-list-container" id="varListContainer"></div>

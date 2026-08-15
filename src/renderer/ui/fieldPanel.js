@@ -110,7 +110,7 @@ function buildColumn(fieldDefs, tab) {
     if (hasFormula) {
       const formulaBadge = document.createElement('span');
       formulaBadge.className = 'field-badge--formula';
-      formulaBadge.textContent = '📐 auto';
+      formulaBadge.innerHTML = '<i class="fa-solid fa-calculator"></i> auto';
       formulaBadge.title = `Auto-calculated by formula:\n${def.formula}`;
       labelRow.appendChild(formulaBadge);
     }
@@ -118,16 +118,16 @@ function buildColumn(fieldDefs, tab) {
     if (def.locked) {
       const s = document.createElement('span');
       s.title = 'Locked — value preserved on Clear';
-      s.style.cssText = 'font-size:10px;opacity:0.65;';
-      s.textContent = String.fromCodePoint(0x1F512);
+      s.style.cssText = 'font-size:10px;opacity:0.8;display:inline-flex;align-items:center;';
+      s.innerHTML = '<i class="fa-solid fa-lock" style="font-size:10px;color:var(--text-dim);"></i>';
       labelRow.appendChild(s);
     }
 
     if (def.hidden) {
       const s = document.createElement('span');
       s.title = 'Hidden — value protected';
-      s.style.cssText = 'font-size:10px;opacity:0.65;';
-      s.textContent = String.fromCodePoint(0x1F510);
+      s.style.cssText = 'font-size:10px;opacity:0.8;display:inline-flex;align-items:center;';
+      s.innerHTML = '<i class="fa-solid fa-key" style="font-size:10px;color:var(--signal);"></i>';
       labelRow.appendChild(s);
     }
 

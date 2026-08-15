@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FE Macro Console — Setting</title>
+  <link rel="stylesheet" href="../../assets/fontawesome/css/all.min.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -17,26 +18,19 @@
         <h1 class="settings-window-title">Setting</h1>
         <!-- Top navbar: Command Sets vs Variables vs View -->
         <nav class="editor-top-nav" role="tablist">
-          <button id="tabNavApps" class="editor-top-tab editor-top-tab--active" role="tab" aria-selected="true">Command
-            Sets (Apps)</button>
-          <button id="tabNavVariables" class="editor-top-tab" role="tab" aria-selected="false">Variables</button>
-          <button id="tabNavView" class="editor-top-tab" role="tab" aria-selected="false">View</button>
+          <button id="tabNavApps" class="editor-top-tab editor-top-tab--active" role="tab" aria-selected="true"><i class="fa-solid fa-layer-group"></i> Command Sets (Apps)</button>
+          <button id="tabNavVariables" class="editor-top-tab" role="tab" aria-selected="false"><i class="fa-solid fa-code"></i> Variables</button>
+          <button id="tabNavView" class="editor-top-tab" role="tab" aria-selected="false"><i class="fa-solid fa-palette"></i> View</button>
         </nav>
       </div>
       <div class="editor-header-right">
-        <!-- Export: arrow-up-to-line -->
+        <!-- Export -->
         <button id="btnExportConfig" class="btn btn--ghost btn--icon" title="Export All Settings">
-          <svg class="btn-icon-svg" viewBox="0 0 384 512" width="13" height="13" fill="currentColor">
-            <path
-              d="M214.6 153.4c-12.5-12.5-32.8-12.5-45.3 0l-128 128c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 253.3V448c0 17.7 14.3 32 32 32s32-14.3 32-32V253.3l73.4 73.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-128-128zM352 64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32C14.3 0 0 14.3 0 32s14.3 32 32 32h320z" />
-          </svg>
+          <i class="fa-solid fa-file-export"></i>
         </button>
-        <!-- Import: arrow-down-to-line -->
+        <!-- Import -->
         <button id="btnImportConfig" class="btn btn--ghost btn--icon" title="Import Settings">
-          <svg class="btn-icon-svg" viewBox="0 0 384 512" width="13" height="13" fill="currentColor">
-            <path
-              d="M169.4 358.6c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 258.7V64c0-17.7-14.3-32-32-32s-32 14.3-32 32v194.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128zM32 448c-17.7 0-32 14.3-32 32s14.3 32 32 32h320c17.7 0 32-14.3 32-32s-14.3-32-32-32H32z" />
-          </svg>
+          <i class="fa-solid fa-file-import"></i>
         </button>
       </div>
     </header>
@@ -52,7 +46,7 @@
         <nav class="editor-nav">
           <div class="editor-nav-label">Command sets (Apps)</div>
           <div id="editorModeList" class="editor-mode-list"></div>
-          <button id="btnAddMode" class="btn btn--ghost btn--sm editor-add-mode">+ New set</button>
+          <button id="btnAddMode" class="btn btn--ghost btn--sm editor-add-mode"><i class="fa-solid fa-plus"></i> New set</button>
         </nav>
 
         <div class="editor-main">
@@ -61,20 +55,20 @@
             <div class="editor-procs-label">Programs:</div>
             <div class="editor-procs-list" id="editorProcsList"></div>
             <button id="btnAddProcToSet" class="btn btn--ghost btn--xs"
-              title="Add running program to this command set">+ Add Program</button>
+              title="Add running program to this command set"><i class="fa-solid fa-plus"></i> Add Program</button>
           </div>
 
           <!-- Submode bar in editor -->
           <div class="editor-submode-bar" id="editorSubmodeBar">
             <div class="editor-submode-label">Sub-modes:</div>
             <div class="editor-submode-list" id="editorSubmodeList"></div>
-            <button id="btnAddSubmode" class="btn btn--ghost btn--xs" title="Add sub-macro set">+ Sub-mode</button>
+            <button id="btnAddSubmode" class="btn btn--ghost btn--xs" title="Add sub-macro set"><i class="fa-solid fa-plus"></i> Sub-mode</button>
           </div>
 
           <div class="editor-main-header">
             <input id="editorGroupTitle" class="editor-group-title-input"
               placeholder="Group name (e.g. AP Monitoring)" />
-            <button id="btnAddGroup" class="btn btn--ghost btn--sm">+ Group</button>
+            <button id="btnAddGroup" class="btn btn--ghost btn--sm"><i class="fa-solid fa-folder-plus"></i> Group</button>
           </div>
           <div id="editorGroups" class="editor-groups"></div>
         </div>
@@ -90,7 +84,7 @@
           </div>
           <div class="var-manager-actions">
             <input id="varSearchInput" class="form-input var-search-input" placeholder="Search variables…" />
-            <button id="btnAddVariable" class="btn btn--primary btn--sm">+ Add Variable</button>
+            <button id="btnAddVariable" class="btn btn--primary btn--sm"><i class="fa-solid fa-plus"></i> Add Variable</button>
           </div>
         </div>
         <div class="var-list-container" id="varListContainer"></div>
@@ -107,7 +101,7 @@
                 <span class="view-section-title">Color Theme Preset</span>
                 <span class="view-section-desc">Select a visual theme for the macro console and setting window.</span>
               </div>
-              <button id="btnAddCustomTheme" class="btn btn--primary btn--xs" title="Create Custom Theme">+ Add Theme</button>
+              <button id="btnAddCustomTheme" class="btn btn--primary btn--xs" title="Create Custom Theme"><i class="fa-solid fa-plus"></i> Add Theme</button>
             </div>
             <div class="theme-preset-grid" id="themePresetGrid"></div>
           </div>
@@ -222,7 +216,7 @@
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;margin-bottom:4px;">
           <label class="form-label" style="margin-bottom:0;" for="vfFormula">Formula (Split &amp; Calculation)</label>
-          <button id="vfOpenStudio" type="button" class="btn btn--secondary btn--xs" style="gap:4px;">📐 Open Formula Studio...</button>
+          <button id="vfOpenStudio" type="button" class="btn btn--secondary btn--xs" style="gap:4px;"><i class="fa-solid fa-calculator"></i> Open Formula Studio...</button>
         </div>
         <textarea id="vfFormula" class="form-textarea" rows="4" style="font-family:monospace;font-size:11.5px;width:100%;resize:vertical;" placeholder="Click 'Open Formula Studio...' to build and test formula visually"></textarea>
 
@@ -231,16 +225,16 @@
         <div style="display:flex;gap:16px;margin-top:8px;">
           <label class="form-checkbox">
             <input type="checkbox" id="vfLocked" />
-            🔒 Lock (preserve value on Clear)
+            <i class="fa-solid fa-lock" style="color:var(--text-dim);margin-right:2px;"></i> Lock (preserve value on Clear)
           </label>
           <label class="form-checkbox">
             <input type="checkbox" id="vfHidden" />
-            🔐 Hidden (password-protected access)
+            <i class="fa-solid fa-key" style="color:var(--signal);margin-right:2px;"></i> Hidden (password-protected access)
           </label>
         </div>
       </div>
       <div class="modal-footer modal-footer--split">
-        <button id="vfDelete" class="btn btn--danger-ghost">Delete</button>
+        <button id="vfDelete" class="btn btn--danger-ghost"><i class="fa-solid fa-trash-can"></i> Delete</button>
         <div class="modal-footer-right">
           <button id="vfCancel" class="btn btn--ghost">Cancel</button>
           <button id="vfSave" class="btn btn--primary">Save Variable</button>
@@ -443,10 +437,11 @@
 
 
   <!-- ============ ADMIN PASSWORD MODAL (for hidden variable ops) ============ -->
+  <!-- ============ ADMIN PASSWORD MODAL (for hidden variable ops) ============ -->
   <div id="adminPasswordModal" class="modal-overlay modal-overlay--top modal-overlay--hidden">
     <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="adminPwTitle">
       <div class="modal-header">
-        <h2 id="adminPwTitle">🔐 Admin Password Required</h2>
+        <h2 id="adminPwTitle"><i class="fa-solid fa-shield-halved" style="color:var(--signal);margin-right:6px;"></i> Admin Password Required</h2>
       </div>
       <div class="form-body">
         <p id="adminPwMessage" style="color:var(--text-dim);font-size:11px;margin-bottom:8px;">Enter admin password to continue.</p>
@@ -511,10 +506,10 @@
     <div class="modal modal--studio" role="dialog" aria-modal="true" aria-labelledby="formulaStudioTitle">
       <div class="modal-header">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:18px;">📐</span>
+          <i class="fa-solid fa-calculator" style="color:var(--signal);font-size:15px;"></i>
           <h2 id="formulaStudioTitle" style="font-size:14px;font-weight:600;">Formula Studio</h2>
         </div>
-        <button id="fsCloseBtn" class="btn btn--icon" title="Close studio">&times;</button>
+        <button id="fsCloseBtn" class="btn btn--icon" title="Close studio"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
       <div class="formula-studio-container">
@@ -557,10 +552,10 @@
           <div class="studio-section">
             <div class="studio-section-title">Templates &amp; Presets</div>
             <div class="studio-preset-list">
-              <button type="button" class="studio-preset-btn" id="fsPresetIpInc">📦 IP Last Octet + 1</button>
-              <button type="button" class="studio-preset-btn" id="fsPresetOlt">📦 Split OLT Port (Index 0)</button>
-              <button type="button" class="studio-preset-btn" id="fsPresetOnu">📦 Split ONU Index (Index 1)</button>
-              <button type="button" class="studio-preset-btn" id="fsPresetClear">🗑 Clear Formula</button>
+              <button type="button" class="studio-preset-btn" id="fsPresetIpInc"><i class="fa-solid fa-cube"></i> IP Last Octet + 1</button>
+              <button type="button" class="studio-preset-btn" id="fsPresetOlt"><i class="fa-solid fa-cube"></i> Split OLT Port (Index 0)</button>
+              <button type="button" class="studio-preset-btn" id="fsPresetOnu"><i class="fa-solid fa-cube"></i> Split ONU Index (Index 1)</button>
+              <button type="button" class="studio-preset-btn" id="fsPresetClear"><i class="fa-solid fa-trash-can"></i> Clear Formula</button>
             </div>
           </div>
 
@@ -592,10 +587,10 @@
         <div class="formula-studio-test-pane">
           <div class="studio-test-header">
             <div style="display:flex;align-items:center;gap:6px;">
-              <span>🧪</span>
+              <i class="fa-solid fa-flask-vial" style="color:var(--signal);"></i>
               <span style="font-weight:600;font-size:12px;">Live Test Environment</span>
             </div>
-            <span style="font-size:10px;color:var(--signal, #5eead4);background:rgba(94,234,212,0.1);padding:1px 6px;border-radius:3px;">⚡ Auto-run</span>
+            <span style="font-size:10px;color:var(--signal, #5eead4);background:rgba(94,234,212,0.1);padding:1px 6px;border-radius:3px;"><i class="fa-solid fa-bolt"></i> Auto-run</span>
           </div>
 
           <div class="studio-test-body">

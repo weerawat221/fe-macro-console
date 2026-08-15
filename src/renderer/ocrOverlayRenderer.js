@@ -708,7 +708,7 @@ function renderAssignmentBadges() {
 
     badge.innerHTML = `
       <span>${assign.varLabel}: <b>${assign.text}</b></span>
-      <span class="ocr-var-badge-del" title="Remove assignment">&times;</span>
+      <span class="ocr-var-badge-del" title="Remove assignment"><i class="fa-solid fa-xmark"></i></span>
     `;
 
     badge.querySelector('.ocr-var-badge-del').addEventListener('click', (e) => {
@@ -724,7 +724,7 @@ function renderAssignmentBadges() {
 function updateApplyButton() {
   const count = assignments.size;
   btnApplyValues.disabled = count === 0;
-  btnApplyValues.textContent = `✔ Apply to Macro (${count} Valuable${count === 1 ? '' : 's'})`;
+  btnApplyValues.innerHTML = `<i class="fa-solid fa-check"></i> Apply to Macro (${count} Variable${count === 1 ? '' : 's'})`;
 }
 
 // =========================================================
