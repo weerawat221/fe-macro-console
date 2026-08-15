@@ -1,3 +1,7 @@
+const path = require('path');
+const fs = require('fs');
+const { spawn } = require('child_process');
+
 function resolveExePath() {
   const candidates = [
     path.join(__dirname, '..', 'Win32Bridge.exe'),
