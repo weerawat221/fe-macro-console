@@ -1735,20 +1735,7 @@ function closeCommandForm() {
 
 function getAllAvailableTokens() {
   const vars = Array.isArray(variables) ? variables : [];
-  const baseKeys = vars.map((v) => v.key);
-  return [
-    ...baseKeys,
-    'onu_idx',
-    'olt',
-    'lan_ip+1',
-    'lan_ip+2',
-    'lan_mask',
-    'lan_ip:blue_full',
-    'lan_ip:tab',
-    'lan_ip:blue',
-    'ce_ip+1',
-    'pe_ip+1',
-  ];
+  return vars.map((v) => v.key);
 }
 
 function updateTokenHint() {
@@ -1760,13 +1747,7 @@ function updateTokenHint() {
   const availableTokens = getAllAvailableTokens();
   const known = new Set(availableTokens);
 
-  const isTokenValid = (t) => {
-    if (known.has(t)) return true;
-    if (t.match(/^([a-zA-Z0-9_]+)([+-]\d+)$/)) return true;
-    if (t.match(/^(.*?)\.([1-4])$/)) return true;
-    if (t.includes(':blue') || t.includes(':tab') || t.includes(':blue_full')) return true;
-    return false;
-  };
+  const isTokenValid = (t) => known.has(t);
 
   if (found.length === 0) {
     hintEl.innerHTML = `Available tokens (click to insert): ${availableTokens.map((t) => `<span class="token-chip" data-token="{${t}}">{${t}}</span>`).join('')}`;

@@ -43,14 +43,6 @@ function getActiveVariablesForCurrentMode() {
   });
 
   const relevant = varDefs.filter((v) => usedKeys.has(v.key));
-
-  usedKeys.forEach((key) => {
-    if (!relevant.some((v) => v.key === key)) {
-      const def = varDefs.find((v) => v.key === key);
-      relevant.push(def || { key, label: key.toUpperCase().replace(/_/g, ' '), description: '' });
-    }
-  });
-
   return relevant;
 }
 

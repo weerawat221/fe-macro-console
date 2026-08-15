@@ -257,12 +257,42 @@ const DEFAULT_VARIABLES = [
   { key: 'captcha', label: 'Captcha', description: 'Login Captcha Code', dataType: 'String' },
 ];
 
+const OBSOLETE_KEYS = new Set([
+  'lan_mask',
+  'mask',
+  'cred_ap_pass_old',
+  'cred_ap_pass_new',
+  'lan_ip+1',
+  'lan_ip+2',
+  'lan_ip:tab',
+  'lan_ip:blue',
+  'lan_ip:blue_full',
+  'lan_mask:tab',
+  'lan_ip+1:tab',
+]);
+
+function upgradeTemplateTokens(tmpl) {
+  if (typeof tmpl !== 'string') return tmpl;
+  return tmpl
+    .replace(/\{lan_ip:blue_full\}/g, '{lan_ip}\t{subnetmask29}\t{lan_ip_1}\t{lan_ip_2}\t{lan_ip}')
+    .replace(/\{lan_ip:blue\}/g, '{lan_ip}')
+    .replace(/\{lan_ip:tab\}/g, '{lan_ip}')
+    .replace(/\{lan_mask:tab\}/g, '{subnetmask29}')
+    .replace(/\{lan_ip\+1:tab\}/g, '{lan_ip_1}')
+    .replace(/\{lan_ip\+1\}/g, '{lan_ip_1}')
+    .replace(/\{lan_ip\+2\}/g, '{lan_ip_2}')
+    .replace(/\{lan_mask\}/g, '{subnetmask29}')
+    .replace(/\{mask\}/g, '{subnetmask29}')
+    .replace(/\{cred_ap_pass_old\}/g, '')
+    .replace(/\{cred_ap_pass_new\}/g, '');
+}
+
 function normalizeVariables(stored) {
   if (!Array.isArray(stored) || stored.length === 0) return DEFAULT_VARIABLES;
 
   const keyMap = new Map();
   stored.forEach((v) => {
-    if (v && v.key) {
+    if (v && v.key && !OBSOLETE_KEYS.has(v.key)) {
       keyMap.set(v.key, {
         key: v.key,
         label: v.label || v.key,
@@ -317,6 +347,23 @@ function normalizeCommandSets(stored) {
       if (!result[key].process && defApp.process) result[key].process = defApp.process;
       if (!result[key].processes && defApp.processes) result[key].processes = [...defApp.processes];
       if (!result[key].keywords && defApp.keywords) result[key].keywords = [...defApp.keywords];
+    }
+  });
+
+  // Upgrade legacy template tokens across all command sets
+  Object.values(result).forEach((app) => {
+    if (app && app.submodes) {
+      Object.values(app.submodes).forEach((sub) => {
+        if (sub && sub.groups) {
+          Object.values(sub.groups).forEach((cmdList) => {
+            (cmdList || []).forEach((cmd) => {
+              if (cmd && cmd.template) {
+                cmd.template = upgradeTemplateTokens(cmd.template);
+              }
+            });
+          });
+        }
+      });
     }
   });
 
