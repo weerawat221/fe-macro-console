@@ -1492,7 +1492,7 @@ function renderVariablesManager() {
       const defSpan = document.createElement('span');
       defSpan.className = 'var-card-desc';
       defSpan.style.color = 'var(--text-dim)';
-      defSpan.textContent = `Default: ${v.default_value}`;
+      defSpan.textContent = v.hidden ? 'Default: ••••••••' : `Default: ${v.default_value}`;
       card.appendChild(defSpan);
     }
 
