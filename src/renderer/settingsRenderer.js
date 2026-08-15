@@ -139,6 +139,7 @@ function initUI() {
   initAddProcModal();
   initCommandFormModal();
   initVariableFormModal();
+  initFormulaStudio();
   initConflictModal();
   initAdminPasswordModal();
   initExportPasswordModal();
@@ -148,6 +149,7 @@ function initUI() {
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       const openModals = [
+        { id: 'formulaStudioModal', close: closeFormulaStudio },
         { id: 'adminPasswordModal', close: closeAdminPasswordModal },
         { id: 'exportPasswordModal', close: closeExportPasswordModal },
         { id: 'importPasswordModal', close: closeImportPasswordModal },
@@ -2002,6 +2004,9 @@ function initVariableFormModal() {
   document.getElementById('vfSave').addEventListener('click', saveVariableForm);
   document.getElementById('vfDelete').addEventListener('click', deleteVariableForm);
 
+  // Open Formula Studio button handler
+  document.getElementById('vfOpenStudio')?.addEventListener('click', openFormulaStudio);
+
   // Test formula button handler
   document.getElementById('vfTestFormula')?.addEventListener('click', () => {
     const rawKey = document.getElementById('vfKey').value.trim();
@@ -2228,6 +2233,279 @@ function deleteVariableForm() {
   } else {
     doDelete();
   }
+}
+
+// =============================================================
+// FORMULA STUDIO MODAL & INTERACTIVE TEST RUNNER
+// =============================================================
+
+let fsTargetKey = 'target_var';
+let fsDataType = 'String';
+let fsTestInputsState = {}; // { varKey: value }
+
+function initFormulaStudio() {
+  document.getElementById('fsCloseBtn')?.addEventListener('click', closeFormulaStudio);
+  document.getElementById('fsCancelBtn')?.addEventListener('click', closeFormulaStudio);
+  document.getElementById('fsApplyBtn')?.addEventListener('click', applyFormulaStudio);
+  document.getElementById('fsRunTestBtn')?.addEventListener('click', runFormulaStudioTest);
+
+  // Helper insertion chips (functions, operators, arrays)
+  document.querySelectorAll('#formulaStudioModal [data-insert]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      insertTextIntoStudioEditor(chip.getAttribute('data-insert'));
+    });
+  });
+
+  // Presets
+  document.getElementById('fsPresetIpInc')?.addEventListener('click', () => {
+    const code = `{\n  array[] = lan_ip.split(".")\n  array[3] = toint(array[3]) + 1\n  ${fsTargetKey} = array[0] + "." + array[1] + "." + array[2] + "." + tostring(array[3])\n}`;
+    setStudioEditorCode(code);
+  });
+
+  document.getElementById('fsPresetOlt')?.addEventListener('click', () => {
+    const code = `{\n  ${fsTargetKey} = port.split(":", 0)\n}`;
+    setStudioEditorCode(code);
+  });
+
+  document.getElementById('fsPresetOnu')?.addEventListener('click', () => {
+    const code = `{\n  ${fsTargetKey} = port.split(":", 1)\n}`;
+    setStudioEditorCode(code);
+  });
+
+  document.getElementById('fsPresetClear')?.addEventListener('click', () => {
+    const code = `{\n  ${fsTargetKey} = \n}`;
+    setStudioEditorCode(code);
+  });
+
+  // Editor typing triggers live variable detection and test runner
+  const editor = document.getElementById('fsCodeEditor');
+  if (editor) {
+    editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        insertTextIntoStudioEditor('  ');
+      }
+    });
+
+    let typingTimer = null;
+    editor.addEventListener('input', () => {
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        updateStudioTestInputs();
+        runFormulaStudioTest();
+      }, 250);
+    });
+  }
+}
+
+function openFormulaStudio() {
+  const rawKey = document.getElementById('vfKey').value.trim();
+  fsTargetKey = rawKey.toLowerCase().replace(/[^a-z0-9_]/g, '_') || 'target_var';
+  fsDataType = document.getElementById('vfDataType').value || 'String';
+  const existingFormula = document.getElementById('vfFormula').value.trim();
+
+  const titleEl = document.getElementById('formulaStudioTitle');
+  if (titleEl) titleEl.textContent = `Formula Studio — {${fsTargetKey}}`;
+
+  const hintEl = document.getElementById('fsTargetHint');
+  if (hintEl) hintEl.textContent = `Target: {${fsTargetKey}} [${fsDataType}]`;
+
+  // Render Variable Chips
+  const chipsContainer = document.getElementById('fsVarChips');
+  if (chipsContainer) {
+    chipsContainer.innerHTML = '';
+    variables.forEach((v) => {
+      if (!v || !v.key || v.key === fsTargetKey) return;
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'studio-chip studio-chip--var';
+      chip.textContent = `{${v.key}}`;
+      chip.title = `${v.label || v.key} (${v.dataType || 'String'})\nClick to insert`;
+      chip.addEventListener('click', () => {
+        insertTextIntoStudioEditor(v.key);
+      });
+      chipsContainer.appendChild(chip);
+    });
+  }
+
+  // Initial code
+  const initialCode = existingFormula || `{\n  // Enter formula assignments here\n  ${fsTargetKey} = \n}`;
+  setStudioEditorCode(initialCode);
+
+  document.getElementById('formulaStudioModal')?.classList.remove('modal-overlay--hidden');
+  document.getElementById('fsCodeEditor')?.focus();
+}
+
+function closeFormulaStudio() {
+  document.getElementById('formulaStudioModal')?.classList.add('modal-overlay--hidden');
+}
+
+function setStudioEditorCode(code) {
+  const editor = document.getElementById('fsCodeEditor');
+  if (editor) {
+    editor.value = code;
+  }
+  updateStudioTestInputs();
+  runFormulaStudioTest();
+}
+
+function insertTextIntoStudioEditor(text) {
+  const editor = document.getElementById('fsCodeEditor');
+  if (!editor) return;
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+  const val = editor.value;
+
+  editor.value = val.substring(0, start) + text + val.substring(end);
+  editor.selectionStart = editor.selectionEnd = start + text.length;
+  editor.focus();
+
+  updateStudioTestInputs();
+  runFormulaStudioTest();
+}
+
+function updateStudioTestInputs() {
+  const editor = document.getElementById('fsCodeEditor');
+  const container = document.getElementById('fsTestInputsContainer');
+  if (!editor || !container) return;
+
+  const formula = editor.value;
+  const referencedVars = extractReferencedVariables(formula, fsTargetKey);
+
+  // Preserve existing user inputs
+  container.querySelectorAll('.studio-test-input').forEach((inp) => {
+    const key = inp.dataset.varKey;
+    if (key) fsTestInputsState[key] = inp.value;
+  });
+
+  container.innerHTML = '';
+
+  if (referencedVars.length === 0) {
+    const emptyMsg = document.createElement('div');
+    emptyMsg.style.cssText = 'color:var(--text-dim);font-size:11px;font-style:italic;padding:4px 0;';
+    emptyMsg.textContent = 'No referenced variables detected yet.';
+    container.appendChild(emptyMsg);
+    return;
+  }
+
+  referencedVars.forEach((varKey) => {
+    const vDef = variables.find((v) => v.key === varKey);
+    let sampleVal = fsTestInputsState[varKey];
+    if (sampleVal === undefined) {
+      if (vDef && vDef.default_value) {
+        sampleVal = vDef.default_value;
+      } else if (varKey.includes('ip')) {
+        sampleVal = '192.168.1.1';
+      } else if (varKey.includes('port')) {
+        sampleVal = '1/1/1:5';
+      } else if (varKey.includes('vlan')) {
+        sampleVal = '120';
+      } else if (varKey.includes('mask')) {
+        sampleVal = '255.255.255.248';
+      } else if (varKey.includes('onu')) {
+        sampleVal = '5';
+      } else {
+        sampleVal = 'sample_value';
+      }
+      fsTestInputsState[varKey] = sampleVal;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'studio-test-row';
+
+    const label = document.createElement('label');
+    label.className = 'studio-test-label';
+    label.textContent = `{${varKey}}` + (vDef?.dataType ? ` [${vDef.dataType}]` : '');
+    label.htmlFor = `fs_test_${varKey}`;
+
+    const input = document.createElement('input');
+    input.id = `fs_test_${varKey}`;
+    input.className = 'studio-test-input';
+    input.dataset.varKey = varKey;
+    input.value = sampleVal;
+    input.placeholder = `Test value for {${varKey}}`;
+    input.addEventListener('input', () => {
+      fsTestInputsState[varKey] = input.value;
+      runFormulaStudioTest();
+    });
+
+    row.appendChild(label);
+    row.appendChild(input);
+    container.appendChild(row);
+  });
+}
+
+function runFormulaStudioTest() {
+  const editor = document.getElementById('fsCodeEditor');
+  const card = document.getElementById('fsTestResultCard');
+  const statusEl = document.getElementById('fsResultStatus');
+  const valEl = document.getElementById('fsResultValue');
+  const diagEl = document.getElementById('fsResultDiagnostic');
+  if (!editor || !card) return;
+
+  const formula = editor.value.trim();
+  if (!formula) {
+    card.className = 'studio-result-card studio-result-card--idle';
+    statusEl.textContent = 'Enter a formula to test';
+    valEl.textContent = '';
+    diagEl.textContent = '';
+    return;
+  }
+
+  // Gather current test inputs
+  const testEnv = { ...fsTestInputsState };
+
+  try {
+    const ast = parseFormula(formula, fsTargetKey);
+    const result = evaluateFormulaAst(ast, testEnv, fsTargetKey);
+    const valRes = validateVariableValue(fsDataType, result);
+
+    if (!valRes.valid) {
+      card.className = 'studio-result-card studio-result-card--error';
+      statusEl.textContent = '❌ Data Type Validation Failed';
+      valEl.textContent = `Raw Output: "${result}"`;
+      diagEl.textContent = valRes.error;
+      return;
+    }
+
+    card.className = 'studio-result-card studio-result-card--success';
+    statusEl.textContent = '✅ Computed Successfully';
+    valEl.textContent = `Output: "${result}"`;
+    diagEl.textContent = `Data Type [${fsDataType}] validation passed.`;
+  } catch (err) {
+    card.className = 'studio-result-card studio-result-card--error';
+    statusEl.textContent = '❌ Evaluation Error';
+    valEl.textContent = '';
+    diagEl.textContent = err.message;
+  }
+}
+
+function applyFormulaStudio() {
+  const editor = document.getElementById('fsCodeEditor');
+  const formula = editor?.value.trim() || '';
+
+  if (formula) {
+    try {
+      parseFormula(formula, fsTargetKey);
+    } catch (err) {
+      alert(`Cannot apply invalid formula:\n\n${err.message}`);
+      return;
+    }
+
+    const cycleRes = detectCircularDependency(variables, { key: fsTargetKey, formula });
+    if (cycleRes.hasCycle) {
+      alert(`Circular dependency detected:\n\n${cycleRes.message}`);
+      return;
+    }
+  }
+
+  const vfFormula = document.getElementById('vfFormula');
+  if (vfFormula) {
+    vfFormula.value = formula;
+  }
+
+  closeFormulaStudio();
+  showToast(`Formula applied for {${fsTargetKey}}!`);
 }
 
 // =============================================================
