@@ -460,6 +460,34 @@ select {
   color: var(--text-dim);
 }
 
+.field-input--readonly {
+  background: rgba(255, 255, 255, 0.025);
+  border-color: rgba(94, 234, 212, 0.25);
+  color: var(--signal, #5eead4);
+  cursor: default;
+  user-select: text;
+}
+
+.field-input--readonly:focus {
+  border-color: var(--signal, #5eead4);
+  background: rgba(94, 234, 212, 0.05);
+}
+
+.field-badge--formula {
+  font-size: 8.5px;
+  font-weight: 600;
+  color: var(--signal, #5eead4);
+  background: rgba(94, 234, 212, 0.12);
+  border: 1px solid rgba(94, 234, 212, 0.25);
+  padding: 0 4px;
+  border-radius: 3px;
+  margin-left: 4px;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 /* ============ MODE SELECTOR (DYNAMIC SUB-MODES) ============ */
 
 .mode-selector {

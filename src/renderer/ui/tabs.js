@@ -6,8 +6,19 @@ import { state, setState, getActiveTab, makeId } from '../state.js';
 import { showError } from './errorBanner.js';
 import { renderFieldPanel } from './fieldPanel.js';
 import { renderCommandPanel } from './commandPanel.js';
+import { recalculateVariables } from '../../shared/formulaEngine.js';
 
 let persistTimer = null;
+
+export function recalculateActiveTabVariables(tab) {
+  if (!tab) tab = getActiveTab();
+  if (!tab) return;
+  if (!tab.values) tab.values = {};
+  const varDefs = Array.isArray(state.variables) ? state.variables : [];
+  const recalcRes = recalculateVariables(varDefs, tab.values);
+  tab.values = recalcRes.values;
+  return recalcRes;
+}
 
 export async function persistTabs() {
   await window.feMacro.storeSet('tabs', state.tabs);
@@ -58,11 +69,13 @@ export async function loadTabsFromStore() {
   } else {
     addNewTab();
   }
+  recalculateActiveTabVariables();
   renderTabBar();
 }
 
 export function addNewTab() {
   const tab = { id: makeId('tab'), name: 'New Tab', values: {} };
+  recalculateActiveTabVariables(tab);
   setState({ tabs: [...state.tabs, tab], activeTabId: tab.id });
   renderTabBar();
   renderFieldPanel();
@@ -96,6 +109,7 @@ export function closeTab(tabId) {
   }
 
   setState({ tabs: newTabs, activeTabId: newActiveId });
+  recalculateActiveTabVariables();
   renderTabBar();
   renderFieldPanel();
   renderCommandPanel();
@@ -105,6 +119,7 @@ export function closeTab(tabId) {
 export function selectTab(tabId) {
   if (state.activeTabId === tabId) return;
   setState({ activeTabId: tabId });
+  recalculateActiveTabVariables();
   renderTabBar();
   renderFieldPanel();
   renderCommandPanel();
@@ -126,6 +141,7 @@ export function clearInputs() {
 
   tab.values = preserved;
   tab.name = 'New Tab';
+  recalculateActiveTabVariables(tab);
   setState({ tabs: [...state.tabs] });
   renderTabBar();
   renderFieldPanel();
@@ -138,6 +154,21 @@ export function onTabFieldChange(fieldKey, value) {
   if (!tab) return;
   if (!tab.values) tab.values = {};
   tab.values[fieldKey] = value;
+
+  // Reactively recalculate derived formula variables
+  const varDefs = Array.isArray(state.variables) ? state.variables : [];
+  const recalcRes = recalculateVariables(varDefs, tab.values);
+  tab.values = recalcRes.values;
+
+  // Update DOM inputs for all formula fields reactively
+  varDefs.forEach((v) => {
+    if (v.formula) {
+      const el = document.getElementById(`field_${v.key}`);
+      if (el) {
+        el.value = tab.values[v.key] || '';
+      }
+    }
+  });
 
   // Auto-name tab based on primary identifier
   if (fieldKey === 'sr_ap' || fieldKey === 'sr_onu' || fieldKey === 'lan_ip' || fieldKey === 'pe_ip') {
