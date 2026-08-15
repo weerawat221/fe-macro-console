@@ -2118,13 +2118,11 @@ function saveVariableForm() {
       label,
       description,
       dataType,
-      ...(formula ? { formula } : {}),
-      ...(default_value ? { default_value } : {}),
-      ...(locked || hidden ? { locked: true } : {}),
-      ...(hidden ? { hidden: true } : {}),
+      formula: formula || null,
+      default_value: default_value || null,
+      locked: Boolean(locked || hidden),
+      hidden: Boolean(hidden),
     };
-
-    if (!formula && varObj.formula) delete varObj.formula;
 
     if (isNew) {
       if (variables.some((v) => v.key.toLowerCase() === key)) {
@@ -2133,10 +2131,10 @@ function saveVariableForm() {
       }
       variables.push(varObj);
     } else {
+      const origKey = variables[editingVarIndex].key;
       variables[editingVarIndex] = {
-        ...variables[editingVarIndex],
         ...varObj,
-        key: variables[editingVarIndex].key,
+        key: origKey,
       };
     }
 

@@ -1573,9 +1573,9 @@ function saveVariableForm() {
     key,
     label,
     description,
-    ...(default_value ? { default_value } : {}),
-    ...(locked || hidden ? { locked: true } : {}),
-    ...(hidden ? { hidden: true } : {}),
+    default_value: default_value || null,
+    locked: Boolean(locked || hidden),
+    hidden: Boolean(hidden),
   };
 
   if (isNew) {
@@ -1585,7 +1585,12 @@ function saveVariableForm() {
     }
     state.variables.push(varObj);
   } else {
-    state.variables[editingVarIndex] = { ...state.variables[editingVarIndex], ...varObj, key: state.variables[editingVarIndex].key };
+    const origKey = state.variables[editingVarIndex].key;
+    state.variables[editingVarIndex] = {
+      ...state.variables[editingVarIndex],
+      ...varObj,
+      key: origKey,
+    };
   }
 
   setState({ variables: [...state.variables] });
