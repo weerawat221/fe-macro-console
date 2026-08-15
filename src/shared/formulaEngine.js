@@ -202,7 +202,22 @@ const NodeType = {
  * @param {string} [targetVarKey]
  * @returns {{ type: string, statements: Array<any> }}
  */
-function parseFormula(source, targetVarKey = null) {
+function parseFormula(source, targetVarKey = null, existingVariableKeys = []) {
+  const knownKeysSet = new Set();
+  if (existingVariableKeys) {
+    if (existingVariableKeys instanceof Set) {
+      existingVariableKeys.forEach((k) => {
+        if (typeof k === 'string') knownKeysSet.add(k.toLowerCase());
+        else if (k && k.key) knownKeysSet.add(String(k.key).toLowerCase());
+      });
+    } else if (Array.isArray(existingVariableKeys)) {
+      existingVariableKeys.forEach((k) => {
+        if (typeof k === 'string') knownKeysSet.add(k.toLowerCase());
+        else if (k && k.key) knownKeysSet.add(String(k.key).toLowerCase());
+      });
+    }
+  }
+
   const rawTokens = tokenizeFormula(source);
   let pos = 0;
 
@@ -297,6 +312,13 @@ function parseFormula(source, targetVarKey = null) {
         indexExpr = parseExpression();
         consume(TokenType.RBRACKET);
         targetType = 'ARRAY_ELEMENT'; // array[index] = ...
+      }
+    }
+
+    // Check if intermediate variable collides with an existing Variable
+    if (targetVarKey && targetName.toLowerCase() !== targetVarKey.toLowerCase()) {
+      if (knownKeysSet.has(targetName.toLowerCase())) {
+        throw new Error(`Formula error (Line ${startTok.line}): ไม่อนุญาตให้กำหนดค่าตัวแปร '${targetName}' ซ้ำกับชื่อ Variable ที่มีอยู่แล้วในระบบ (สูตรนี้สามารถกำหนดค่าได้เฉพาะตัวแปรปลายทาง '${targetVarKey}')`);
       }
     }
 

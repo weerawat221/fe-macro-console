@@ -1,4 +1,4 @@
-﻿const { describe, it } = require('node:test');
+const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   tokenizeFormula,
@@ -44,6 +44,25 @@ describe('Formula Engine - Tokenizer & Syntax Parser', () => {
     const code = `{\n  array[] = lan_ip.split(".")\n  array[3] = toint(array[3]) + 1\n  lan_ip_cal_1 = array[0] + "." + array[1] + "." + array[2] + "." + tostring(array[3])\n}`;
     const ast = parseFormula(code, 'lan_ip_cal_1');
     assert.equal(ast.statements.length, 3);
+  });
+
+  it('rejects intermediate variable assignment that collides with existing variables', () => {
+    const existingVars = ['lan_ip', 'lan_ip_1', 'lan_ip_2'];
+    const invalidCode = `{\n  array[] = lan_ip.split(".")\n  array[3] = toint(array[3]) + 1\n  lan_ip_2 = "192.168.1.3"\n  lan_ip_1 = array[0] + "." + array[1] + "." + array[2] + "." + array[3]\n}`;
+    assert.throws(() => {
+      parseFormula(invalidCode, 'lan_ip_1', existingVars);
+    }, /ไม่อนุญาตให้กำหนดค่าตัวแปร 'lan_ip_2' ซ้ำกับชื่อ Variable ที่มีอยู่แล้วในระบบ/);
+  });
+
+  it('isolates local variables like array[] between different formulas', () => {
+    const code1 = `{\n  array[] = ip1.split(".")\n  out1 = array[0]\n}`;
+    const code2 = `{\n  array[] = ip2.split(".")\n  out2 = array[0]\n}`;
+    const ast1 = parseFormula(code1, 'out1');
+    const ast2 = parseFormula(code2, 'out2');
+    const res1 = evaluateFormulaAst(ast1, { ip1: '10.0.0.1' }, 'out1');
+    const res2 = evaluateFormulaAst(ast2, { ip2: '192.168.1.1' }, 'out2');
+    assert.equal(res1, '10');
+    assert.equal(res2, '192');
   });
 });
 

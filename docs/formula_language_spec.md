@@ -1,4 +1,4 @@
-﻿# FE Macro Console — Formula Language Specification
+# FE Macro Console — Formula Language Specification
 
 Specification for the Split and Calculation Formula System used in the Variables engine.
 
@@ -95,3 +95,16 @@ Variables can be assigned a `dataType`:
 | IP octet out of range | `Validation error: octet ที่ 4 มีค่า 256 เกินช่วงที่อนุญาต (0-255)` |
 | Port format invalid | `Validation error: รูปแบบ Port ต้องเป็น slot/card/port หรือ slot/card/port:onu_idx` |
 | Division by zero | `Formula error: ไม่สามารถหารด้วย 0 ได้` |
+| Assign to existing variable | `Formula error (Line 3): ไม่อนุญาตให้กำหนดค่าตัวแปร 'lan_ip_2' ซ้ำกับชื่อ Variable ที่มีอยู่แล้วในระบบ` |
+
+---
+
+## 6. Variable Scoping & Name Collision Rules
+
+1. **Local Scope Isolation**:
+   - Intermediate variables declared inside a formula (such as `array[] = ...` or `temp = ...`) are strictly local to that single formula execution.
+   - Declarations in one variable formula never leak, affect, or share state with other variable formulas.
+
+2. **Name Collision Protection**:
+   - An intermediate statement inside a formula **cannot assign to any variable name that matches an existing Variable token** in the system (other than the destination variable on the final line).
+   - Attempting to declare or assign to an existing variable (e.g. `lan_ip_2 = "..."` inside the formula for `lan_ip_1`) will trigger an immediate syntax/validation rejection.
