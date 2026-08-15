@@ -8,9 +8,6 @@ let pendingAppKey = null;
 
 export function initConfirmModal() {
   document.getElementById('confirmCancel').addEventListener('click', closeConfirmModal);
-  document.getElementById('confirmModal').addEventListener('click', (e) => {
-    if (e.target.id === 'confirmModal') closeConfirmModal();
-  });
   document.getElementById('confirmSend').addEventListener('click', async () => {
     const text = pendingText;
     const appKey = pendingAppKey;

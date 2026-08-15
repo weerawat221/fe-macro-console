@@ -379,9 +379,6 @@ function renderViewSettings() {
 
 function initCustomThemeModal() {
   document.getElementById('ctCancel')?.addEventListener('click', closeCustomThemeModal);
-  document.getElementById('customThemeModal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'customThemeModal') closeCustomThemeModal();
-  });
   document.getElementById('ctSave')?.addEventListener('click', saveCustomTheme);
 
   // Target Color Selector buttons
@@ -743,9 +740,6 @@ function processImportData(data) {
 
 function initConflictModal() {
   document.getElementById('conflictCancel').addEventListener('click', closeConflictModal);
-  document.getElementById('importConflictModal').addEventListener('click', (e) => {
-    if (e.target.id === 'importConflictModal') closeConflictModal();
-  });
   document.getElementById('conflictConfirm').addEventListener('click', confirmApplyImportWithConflicts);
 
   document.getElementById('btnConflictAllOverwrite').addEventListener('click', () => {
@@ -1064,9 +1058,6 @@ function removeProcFromSet(procName) {
 
 function initAddProcModal() {
   document.getElementById('addProcCancel').addEventListener('click', closeAddProcModal);
-  document.getElementById('addProcModal').addEventListener('click', (e) => {
-    if (e.target.id === 'addProcModal') closeAddProcModal();
-  });
   document.getElementById('addProcConfirm').addEventListener('click', confirmAddProcToSet);
 }
 
@@ -1196,9 +1187,6 @@ function renderEditorSubmodes() {
 
 function initNewSubmodeModal() {
   document.getElementById('nsubCancel').addEventListener('click', closeNewSubmodeModal);
-  document.getElementById('newSubmodeModal').addEventListener('click', (e) => {
-    if (e.target.id === 'newSubmodeModal') closeNewSubmodeModal();
-  });
   document.getElementById('nsubCreate').addEventListener('click', confirmCreateSubmode);
   document.getElementById('nsubName').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmCreateSubmode();
@@ -1535,9 +1523,6 @@ function deleteGroup(groupTitle) {
 
 function initNewSetModal() {
   document.getElementById('nsCancel').addEventListener('click', closeNewSetModal);
-  document.getElementById('newSetModal').addEventListener('click', (e) => {
-    if (e.target.id === 'newSetModal') closeNewSetModal();
-  });
   document.getElementById('nsCreate').addEventListener('click', createNewSet);
 
   document.getElementById('nsAppName').addEventListener('input', () => {
@@ -1703,9 +1688,6 @@ function createNewSet() {
 
 function initCommandFormModal() {
   document.getElementById('cfCancel').addEventListener('click', closeCommandForm);
-  document.getElementById('commandFormModal').addEventListener('click', (e) => {
-    if (e.target.id === 'commandFormModal') closeCommandForm();
-  });
   document.getElementById('cfSave').addEventListener('click', saveCommandForm);
   document.getElementById('cfDelete').addEventListener('click', deleteCommandForm);
   document.getElementById('cfTemplate').addEventListener('input', updateTokenHint);
@@ -2017,9 +1999,6 @@ function renderVariablesManager() {
 
 function initVariableFormModal() {
   document.getElementById('vfCancel').addEventListener('click', closeVariableForm);
-  document.getElementById('varFormModal').addEventListener('click', (e) => {
-    if (e.target.id === 'varFormModal') closeVariableForm();
-  });
   document.getElementById('vfSave').addEventListener('click', saveVariableForm);
   document.getElementById('vfDelete').addEventListener('click', deleteVariableForm);
 
@@ -2259,9 +2238,6 @@ let adminSessionUntil = 0; // Timestamp when active admin authentication expires
 
 function initAdminPasswordModal() {
   document.getElementById('adminPwCancel').addEventListener('click', closeAdminPasswordModal);
-  document.getElementById('adminPasswordModal').addEventListener('click', (e) => {
-    if (e.target.id === 'adminPasswordModal') closeAdminPasswordModal();
-  });
   document.getElementById('adminPwConfirmBtn').addEventListener('click', confirmAdminPassword);
   document.getElementById('adminPwInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmAdminPassword();
@@ -2376,9 +2352,6 @@ async function confirmAdminPassword() {
 
 function initExportPasswordModal() {
   document.getElementById('exportPwCancel').addEventListener('click', closeExportPasswordModal);
-  document.getElementById('exportPasswordModal').addEventListener('click', (e) => {
-    if (e.target.id === 'exportPasswordModal') closeExportPasswordModal();
-  });
   document.getElementById('exportPwConfirmBtn').addEventListener('click', confirmExportPassword);
   document.getElementById('exportPwInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmExportPassword();
@@ -2437,9 +2410,6 @@ let pendingEncryptedImport = null;
 
 function initImportPasswordModal() {
   document.getElementById('importPwCancel').addEventListener('click', closeImportPasswordModal);
-  document.getElementById('importPasswordModal').addEventListener('click', (e) => {
-    if (e.target.id === 'importPasswordModal') closeImportPasswordModal();
-  });
   document.getElementById('importPwConfirmBtn').addEventListener('click', confirmImportPassword);
   document.getElementById('importPwInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmImportPassword();
