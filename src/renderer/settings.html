@@ -212,7 +212,26 @@
         <label class="form-label" for="vfDefaultValue">Default Value (optional)</label>
         <input id="vfDefaultValue" class="form-input" placeholder="e.g. 255.255.255.248" />
 
-        <div style="display:flex;gap:16px;margin-top:4px;">
+        <label class="form-label" for="vfDataType">Data Type</label>
+        <select id="vfDataType" class="form-select">
+          <option value="String">String (General Text)</option>
+          <option value="IP">IP Address (4 octets, 0-255)</option>
+          <option value="Port">Port (slot/card/port[:onu_idx])</option>
+          <option value="Number">Number (Numeric)</option>
+        </select>
+
+        <label class="form-label" for="vfFormula">Formula (Split &amp; Calculation)</label>
+        <textarea id="vfFormula" class="form-textarea" rows="4" style="font-family:monospace;font-size:12px;width:100%;resize:vertical;" placeholder="e.g.&#10;{&#10;  array[] = lan_ip.split(&quot;.&quot;)&#10;  array[3] = toint(array[3]) + 1&#10;  lan_ip_cal_1 = array[0] + &quot;.&quot; + array[1] + &quot;.&quot; + array[2] + &quot;.&quot; + tostring(array[3])&#10;}"></textarea>
+        <span class="form-help">Enclose in { ... }. Every line must be an assignment. Last line must assign to this variable.</span>
+
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+          <button id="vfTestFormula" type="button" class="btn btn--ghost btn--xs">🧪 Test formula</button>
+          <span id="vfTestResult" style="font-size:11px;font-family:monospace;flex:1;"></span>
+        </div>
+
+        <div id="vfDependencyInfo" style="margin-top:8px;font-size:11px;padding:6px;border-radius:4px;background:var(--bg-surface);display:none;"></div>
+
+        <div style="display:flex;gap:16px;margin-top:8px;">
           <label class="form-checkbox">
             <input type="checkbox" id="vfLocked" />
             🔒 Lock (preserve value on Clear)

@@ -15,6 +15,13 @@ import {
   generateCustomThemeObject,
 } from './theme.js';
 import { hashPassword, verifyPassword, encryptPayload, decryptPayload } from './crypto.js';
+import {
+  parseFormula,
+  evaluateFormulaAst,
+  validateVariableValue,
+  detectCircularDependency,
+  extractReferencedVariables,
+} from '../shared/formulaEngine.js';
 
 let commandSets = {};
 let variables = [];
@@ -1906,6 +1913,23 @@ function renderVariablesManager() {
     actions.className = 'var-card-actions';
     actions.style.cssText = 'display:flex;gap:4px;align-items:center;';
 
+    // Data type badge
+    if (v.dataType) {
+      const dtBadge = document.createElement('span');
+      dtBadge.textContent = v.dataType;
+      dtBadge.style.cssText = 'font-size:9px;opacity:0.75;padding:1px 4px;border-radius:3px;background:var(--bg-surface);border:1px solid var(--border-subtle);';
+      actions.appendChild(dtBadge);
+    }
+
+    // Formula badge
+    if (v.formula) {
+      const fBadge = document.createElement('span');
+      fBadge.textContent = '📐 formula';
+      fBadge.style.cssText = 'font-size:9px;color:var(--signal, #5eead4);padding:1px 4px;border-radius:3px;background:rgba(94,234,212,0.1);';
+      fBadge.title = v.formula;
+      actions.appendChild(fBadge);
+    }
+
     // System badge
     if (v.system) {
       const sysBadge = document.createElement('span');
@@ -1998,6 +2022,56 @@ function initVariableFormModal() {
   });
   document.getElementById('vfSave').addEventListener('click', saveVariableForm);
   document.getElementById('vfDelete').addEventListener('click', deleteVariableForm);
+
+  // Test formula button handler
+  document.getElementById('vfTestFormula')?.addEventListener('click', () => {
+    const rawKey = document.getElementById('vfKey').value.trim();
+    const key = rawKey.toLowerCase().replace(/[^a-z0-9_]/g, '_') || 'target_var';
+    const formula = document.getElementById('vfFormula').value.trim();
+    const dataType = document.getElementById('vfDataType').value;
+    const resultSpan = document.getElementById('vfTestResult');
+
+    if (!formula) {
+      resultSpan.style.color = 'var(--text-dim)';
+      resultSpan.textContent = 'Enter a formula first';
+      return;
+    }
+
+    try {
+      const ast = parseFormula(formula, key);
+      const mockEnv = {
+        port: '1/1/1:5',
+        lan_ip: '192.168.1.1',
+        ce_ip: '10.0.0.1',
+        pe_ip: '10.0.0.2',
+        sr_ap: 'AP-SITE-01',
+        sr_onu: 'ONU-SITE-01',
+        vlan: '120',
+        captcha: '1234',
+        lan_mask: '255.255.255.248',
+        mask: '255.255.255.248',
+      };
+      variables.forEach((v) => {
+        if (v && v.key && v.default_value) {
+          mockEnv[v.key] = v.default_value;
+        }
+      });
+
+      const res = evaluateFormulaAst(ast, mockEnv, key);
+      const valRes = validateVariableValue(dataType, res);
+      if (!valRes.valid) {
+        resultSpan.style.color = '#ef4444';
+        resultSpan.textContent = `❌ ${valRes.error}`;
+        return;
+      }
+
+      resultSpan.style.color = '#10b981';
+      resultSpan.textContent = `✅ Result: "${res}"`;
+    } catch (err) {
+      resultSpan.style.color = '#ef4444';
+      resultSpan.textContent = `❌ ${err.message}`;
+    }
+  });
 }
 
 function openNewVariableModal() {
@@ -2007,7 +2081,9 @@ function openNewVariableModal() {
 function openVariableForm(index) {
   editingVarIndex = index;
   const isNew = index === null;
-  const v = isNew ? { key: '', label: '', description: '', default_value: '', locked: false, hidden: false } : variables[index];
+  const v = isNew
+    ? { key: '', label: '', description: '', default_value: '', dataType: 'String', formula: '', locked: false, hidden: false }
+    : variables[index];
 
   document.getElementById('varFormTitle').textContent = isNew ? 'Add Variable' : 'Edit Variable';
   const keyInput = document.getElementById('vfKey');
@@ -2017,9 +2093,35 @@ function openVariableForm(index) {
   document.getElementById('vfLabel').value = v.label || '';
   document.getElementById('vfDescription').value = v.description || '';
   document.getElementById('vfDefaultValue').value = v.default_value || '';
+  document.getElementById('vfDataType').value = v.dataType || 'String';
+  document.getElementById('vfFormula').value = v.formula || '';
   document.getElementById('vfLocked').checked = Boolean(v.locked);
   document.getElementById('vfHidden').checked = Boolean(v.hidden);
   document.getElementById('vfDelete').style.display = isNew ? 'none' : 'inline-flex';
+
+  const testResult = document.getElementById('vfTestResult');
+  if (testResult) testResult.textContent = '';
+
+  // Show dependency info if other variables depend on this variable
+  const depInfo = document.getElementById('vfDependencyInfo');
+  if (depInfo) {
+    if (!isNew && v.key) {
+      const dependents = variables.filter((other) => {
+        if (other.key === v.key || !other.formula) return false;
+        const deps = extractReferencedVariables(other.formula, other.key);
+        return deps.includes(v.key);
+      });
+
+      if (dependents.length > 0) {
+        depInfo.style.display = 'block';
+        depInfo.innerHTML = `⚠️ <strong>${dependents.length} variable(s)</strong> depend on this: ${dependents.map((d) => `<code>{${d.key}}</code>`).join(', ')}`;
+      } else {
+        depInfo.style.display = 'none';
+      }
+    } else {
+      depInfo.style.display = 'none';
+    }
+  }
 
   document.getElementById('varFormModal').classList.remove('modal-overlay--hidden');
   if (isNew) keyInput.focus();
@@ -2036,12 +2138,41 @@ function saveVariableForm() {
   const label = document.getElementById('vfLabel').value.trim();
   const description = document.getElementById('vfDescription').value.trim();
   const default_value = document.getElementById('vfDefaultValue').value.trim();
+  const dataType = document.getElementById('vfDataType').value || 'String';
+  const formula = document.getElementById('vfFormula').value.trim();
   const locked = document.getElementById('vfLocked').checked;
   const hidden = document.getElementById('vfHidden').checked;
 
   if (!rawKey) { showToast('Variable key is required'); return; }
   const key = rawKey.toLowerCase().replace(/[^a-z0-9_]/g, '_');
   if (!label) { showToast('Field label is required'); return; }
+
+  // Strict validation on formula if present
+  if (formula) {
+    try {
+      parseFormula(formula, key);
+    } catch (err) {
+      showToast(`Formula syntax error: ${err.message}`);
+      const resSpan = document.getElementById('vfTestResult');
+      if (resSpan) {
+        resSpan.style.color = '#ef4444';
+        resSpan.textContent = `❌ ${err.message}`;
+      }
+      return;
+    }
+
+    // Circular Dependency check
+    const cycleRes = detectCircularDependency(variables, { key, formula });
+    if (cycleRes.hasCycle) {
+      showToast(cycleRes.message);
+      const resSpan = document.getElementById('vfTestResult');
+      if (resSpan) {
+        resSpan.style.color = '#ef4444';
+        resSpan.textContent = `❌ ${cycleRes.message}`;
+      }
+      return;
+    }
+  }
 
   const isNew = editingVarIndex === null;
   const wasHidden = !isNew && Boolean(variables[editingVarIndex]?.hidden);
@@ -2051,10 +2182,14 @@ function saveVariableForm() {
       key,
       label,
       description,
+      dataType,
+      ...(formula ? { formula } : {}),
       ...(default_value ? { default_value } : {}),
       ...(locked || hidden ? { locked: true } : {}),
       ...(hidden ? { hidden: true } : {}),
     };
+
+    if (!formula && varObj.formula) delete varObj.formula;
 
     if (isNew) {
       if (variables.some((v) => v.key.toLowerCase() === key)) {
@@ -2088,8 +2223,20 @@ function deleteVariableForm() {
   if (editingVarIndex === null) return;
   const v = variables[editingVarIndex];
 
+  // Check if any other variable depends on this one
+  const dependents = variables.filter((other) => {
+    if (other.key === v.key || !other.formula) return false;
+    const deps = extractReferencedVariables(other.formula, other.key);
+    return deps.includes(v.key);
+  });
+
+  let confirmMsg = `Delete variable "{${v.key}}"?`;
+  if (dependents.length > 0) {
+    confirmMsg = `⚠️ Warning: ${dependents.length} variable(s) [${dependents.map((d) => d.key).join(', ')}] depend on "{${v.key}}".\n\nAre you sure you want to delete it?`;
+  }
+
   const doDelete = () => {
-    if (!confirm(`Delete variable "{${v.key}}"?`)) return;
+    if (!confirm(confirmMsg)) return;
     variables.splice(editingVarIndex, 1);
     persistVariables();
     closeVariableForm();

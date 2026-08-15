@@ -222,21 +222,21 @@ export const DEFAULT_COMMAND_SETS = {
 };
 
 export const DEFAULT_VARIABLES = [
-  { key: 'sr_ap', label: 'SR (AP)', description: 'Service Request for AP' },
-  { key: 'group_id', label: 'Group ID (AP)', description: 'AP Group Identifier' },
-  { key: 'group_name', label: 'Group Name', description: 'AP Group Name' },
-  { key: 'stelnet_ip', label: 'Stelnet IP', description: 'Stelnet Management IP' },
-  { key: 'port', label: 'Port (OLT)', description: 'OLT Port in slot/card/port:onu_idx format (e.g. 1/1/1:5)' },
-  { key: 'olt', label: 'OLT Port', description: 'OLT base port (e.g. 1/1/1)', formula: 'port.split(":")[0]', system: true },
-  { key: 'onu_idx', label: 'ONU Index', description: 'ONU Index (e.g. 5)', formula: 'port.split(":")[1]', system: true },
-  { key: 'sr_onu', label: 'SR (ONU)', description: 'Service Request for ONU' },
-  { key: 'vlan', label: 'VLAN', description: 'VLAN Identifier (e.g. 120)' },
-  { key: 'ce_ip', label: 'CE IP', description: 'Customer Edge IP' },
-  { key: 'pe_ip', label: 'PE IP', description: 'Provider Edge IP' },
-  { key: 'lan_ip', label: 'LAN IP', description: 'LAN Network Base IP (e.g. 192.168.1.0)' },
-  { key: 'lan_mask', label: 'LAN Mask', description: 'Subnet Mask for LAN network', default_value: '255.255.255.248', system: true },
-  { key: 'mask', label: 'Mask (Alias)', description: 'Alias for LAN Mask', default_value: '255.255.255.248', system: true },
-  { key: 'captcha', label: 'Captcha', description: 'Login Captcha Code' },
+  { key: 'sr_ap', label: 'SR (AP)', description: 'Service Request for AP', dataType: 'String' },
+  { key: 'group_id', label: 'Group ID (AP)', description: 'AP Group Identifier', dataType: 'String' },
+  { key: 'group_name', label: 'Group Name', description: 'AP Group Name', dataType: 'String' },
+  { key: 'stelnet_ip', label: 'Stelnet IP', description: 'Stelnet Management IP', dataType: 'IP' },
+  { key: 'port', label: 'Port (OLT)', description: 'OLT Port in slot/card/port:onu_idx format (e.g. 1/1/1:5)', dataType: 'Port' },
+  { key: 'olt', label: 'OLT Port', description: 'OLT base port (e.g. 1/1/1)', formula: '{\n  olt = port.split(":", 0)\n}', dataType: 'Port', system: true },
+  { key: 'onu_idx', label: 'ONU Index', description: 'ONU Index (e.g. 5)', formula: '{\n  onu_idx = port.split(":", 1)\n}', dataType: 'Number', system: true },
+  { key: 'sr_onu', label: 'SR (ONU)', description: 'Service Request for ONU', dataType: 'String' },
+  { key: 'vlan', label: 'VLAN', description: 'VLAN Identifier (e.g. 120)', dataType: 'Number' },
+  { key: 'ce_ip', label: 'CE IP', description: 'Customer Edge IP', dataType: 'IP' },
+  { key: 'pe_ip', label: 'PE IP', description: 'Provider Edge IP', dataType: 'IP' },
+  { key: 'lan_ip', label: 'LAN IP', description: 'LAN Network Base IP (e.g. 192.168.1.0)', dataType: 'IP' },
+  { key: 'lan_mask', label: 'LAN Mask', description: 'Subnet Mask for LAN network', default_value: '255.255.255.248', dataType: 'IP', system: true },
+  { key: 'mask', label: 'Mask (Alias)', description: 'Alias for LAN Mask', default_value: '255.255.255.248', dataType: 'IP', system: true },
+  { key: 'captcha', label: 'Captcha', description: 'Login Captcha Code', dataType: 'String' },
 ];
 
 export function normalizeVariables(stored) {
@@ -245,13 +245,19 @@ export function normalizeVariables(stored) {
   const keyMap = new Map();
   stored.forEach((v) => {
     if (v && v.key) {
+      let formula = v.formula || null;
+      // Convert legacy prototype formulas if present
+      if (formula === 'port.split(":")[0]') formula = '{\n  olt = port.split(":", 0)\n}';
+      if (formula === 'port.split(":")[1]') formula = '{\n  onu_idx = port.split(":", 1)\n}';
+
       keyMap.set(v.key, {
         key: v.key,
         label: v.label || v.key,
         description: v.description || '',
         locked: !!v.locked,
         hidden: !!v.hidden,
-        formula: v.formula || null,
+        formula: formula,
+        dataType: v.dataType || 'String',
         default_value: v.default_value !== undefined ? v.default_value : null,
         system: !!v.system,
       });
@@ -266,6 +272,7 @@ export function normalizeVariables(stored) {
       const existing = keyMap.get(def.key);
       if (def.formula && !existing.formula) existing.formula = def.formula;
       if (def.default_value && !existing.default_value) existing.default_value = def.default_value;
+      if (def.dataType && !existing.dataType) existing.dataType = def.dataType;
       if (def.system) existing.system = true;
     }
   });

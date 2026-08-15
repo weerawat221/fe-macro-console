@@ -1,6 +1,7 @@
 import { state, getActiveTab } from './state.js';
 import { showError } from './ui/errorBanner.js';
 import { openConfirmModal } from './ui/confirmModal.js';
+import { recalculateVariables } from '../shared/formulaEngine.js';
 
 export function calculateIp(baseIp, increment) {
   try {
@@ -38,23 +39,6 @@ function getSystemVarDefault(key) {
   return def ? (def.default_value || null) : null;
 }
 
-/** Evaluate a formula variable (e.g. olt, onu_idx) given input values */
-function evaluateFormula(formula, values) {
-  if (!formula) return '';
-  try {
-    // Safe eval: only simple split/index expressions
-    const portVal = (values.port || '').trim();
-    if (formula === 'port.split(":")[0]') return portVal.split(':')[0] || '';
-    if (formula === 'port.split(":")[1]') {
-      const parts = portVal.split(':');
-      return parts.length > 1 ? parts[parts.length - 1] : portVal;
-    }
-    return '';
-  } catch {
-    return '';
-  }
-}
-
 function buildTemplateData(tab) {
   const v = tab.values || {};
   const vars = Array.isArray(state.variables) ? state.variables : [];
@@ -65,17 +49,18 @@ function buildTemplateData(tab) {
     if (typeof data[k] === 'string') data[k] = data[k].trim();
   });
 
-  // Resolve system variables: formula-based first, then default_value constants
+  // Populate default constants if not set
   vars.forEach((varDef) => {
-    if (!varDef.system) return;
-    if (data[varDef.key]) return; // user already set value in tab
-
-    if (varDef.formula) {
-      data[varDef.key] = evaluateFormula(varDef.formula, data);
-    } else if (varDef.default_value !== undefined) {
-      data[varDef.key] = varDef.default_value;
+    if (data[varDef.key] === undefined || data[varDef.key] === '') {
+      if (varDef.default_value !== undefined && varDef.default_value !== null) {
+        data[varDef.key] = varDef.default_value;
+      }
     }
   });
+
+  // Recalculate derived formula variables in topological order
+  const recalcRes = recalculateVariables(vars, data);
+  Object.assign(data, recalcRes.values);
 
   // Fallback for lan_mask / mask if not defined in variables list
   if (!data.lan_mask) data.lan_mask = getSystemVarDefault('lan_mask') || '255.255.255.248';

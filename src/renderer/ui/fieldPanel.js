@@ -1,9 +1,6 @@
-﻿// fieldPanel.js
-// Context-aware dynamic input fields.
-// Dynamically resolves system variables (formula-based) and shows lock/hidden icons.
-
 import { state, getActiveTab, getActiveAppSubmode } from '../state.js';
 import { onTabFieldChange } from './tabs.js';
+import { extractReferencedVariables } from '../../shared/formulaEngine.js';
 
 let lastRenderedVarKeys = '';
 
@@ -11,8 +8,10 @@ function buildFormulaSourceMap(varDefs) {
   const map = new Map();
   (varDefs || []).forEach((v) => {
     if (v.formula) {
-      const src = v.formula.match(/^([a-zA-Z0-9_]+)\./);
-      if (src) map.set(v.key, src[1]);
+      const deps = extractReferencedVariables(v.formula, v.key);
+      if (deps && deps.length > 0) {
+        map.set(v.key, deps[0]);
+      }
     }
   });
   return map;
