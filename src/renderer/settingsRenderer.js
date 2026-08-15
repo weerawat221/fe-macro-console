@@ -2000,62 +2000,12 @@ function renderVariablesManager() {
 }
 
 function initVariableFormModal() {
-  document.getElementById('vfCancel').addEventListener('click', closeVariableForm);
-  document.getElementById('vfSave').addEventListener('click', saveVariableForm);
-  document.getElementById('vfDelete').addEventListener('click', deleteVariableForm);
+  document.getElementById('vfCancel')?.addEventListener('click', closeVariableForm);
+  document.getElementById('vfSave')?.addEventListener('click', saveVariableForm);
+  document.getElementById('vfDelete')?.addEventListener('click', deleteVariableForm);
 
   // Open Formula Studio button handler
   document.getElementById('vfOpenStudio')?.addEventListener('click', openFormulaStudio);
-
-  // Test formula button handler
-  document.getElementById('vfTestFormula')?.addEventListener('click', () => {
-    const rawKey = document.getElementById('vfKey').value.trim();
-    const key = rawKey.toLowerCase().replace(/[^a-z0-9_]/g, '_') || 'target_var';
-    const formula = document.getElementById('vfFormula').value.trim();
-    const dataType = document.getElementById('vfDataType').value;
-    const resultSpan = document.getElementById('vfTestResult');
-
-    if (!formula) {
-      resultSpan.style.color = 'var(--text-dim)';
-      resultSpan.textContent = 'Enter a formula first';
-      return;
-    }
-
-    try {
-      const ast = parseFormula(formula, key);
-      const mockEnv = {
-        port: '1/1/1:5',
-        lan_ip: '192.168.1.1',
-        ce_ip: '10.0.0.1',
-        pe_ip: '10.0.0.2',
-        sr_ap: 'AP-SITE-01',
-        sr_onu: 'ONU-SITE-01',
-        vlan: '120',
-        captcha: '1234',
-        lan_mask: '255.255.255.248',
-        mask: '255.255.255.248',
-      };
-      variables.forEach((v) => {
-        if (v && v.key && v.default_value) {
-          mockEnv[v.key] = v.default_value;
-        }
-      });
-
-      const res = evaluateFormulaAst(ast, mockEnv, key);
-      const valRes = validateVariableValue(dataType, res);
-      if (!valRes.valid) {
-        resultSpan.style.color = '#ef4444';
-        resultSpan.textContent = `❌ ${valRes.error}`;
-        return;
-      }
-
-      resultSpan.style.color = '#10b981';
-      resultSpan.textContent = `✅ Result: "${res}"`;
-    } catch (err) {
-      resultSpan.style.color = '#ef4444';
-      resultSpan.textContent = `❌ ${err.message}`;
-    }
-  });
 }
 
 function openNewVariableModal() {
@@ -2082,9 +2032,6 @@ function openVariableForm(index) {
   document.getElementById('vfLocked').checked = Boolean(v.locked);
   document.getElementById('vfHidden').checked = Boolean(v.hidden);
   document.getElementById('vfDelete').style.display = isNew ? 'none' : 'inline-flex';
-
-  const testResult = document.getElementById('vfTestResult');
-  if (testResult) testResult.textContent = '';
 
   // Show dependency info if other variables depend on this variable
   const depInfo = document.getElementById('vfDependencyInfo');
@@ -2137,11 +2084,6 @@ function saveVariableForm() {
       parseFormula(formula, key);
     } catch (err) {
       showToast(`Formula syntax error: ${err.message}`);
-      const resSpan = document.getElementById('vfTestResult');
-      if (resSpan) {
-        resSpan.style.color = '#ef4444';
-        resSpan.textContent = `❌ ${err.message}`;
-      }
       return;
     }
 
@@ -2149,11 +2091,6 @@ function saveVariableForm() {
     const cycleRes = detectCircularDependency(variables, { key, formula });
     if (cycleRes.hasCycle) {
       showToast(cycleRes.message);
-      const resSpan = document.getElementById('vfTestResult');
-      if (resSpan) {
-        resSpan.style.color = '#ef4444';
-        resSpan.textContent = `❌ ${cycleRes.message}`;
-      }
       return;
     }
   }
@@ -2247,7 +2184,14 @@ function initFormulaStudio() {
   document.getElementById('fsCloseBtn')?.addEventListener('click', closeFormulaStudio);
   document.getElementById('fsCancelBtn')?.addEventListener('click', closeFormulaStudio);
   document.getElementById('fsApplyBtn')?.addEventListener('click', applyFormulaStudio);
-  document.getElementById('fsRunTestBtn')?.addEventListener('click', runFormulaStudioTest);
+
+  // Data Type dropdown change inside Studio
+  document.getElementById('fsDataType')?.addEventListener('change', (e) => {
+    fsDataType = e.target.value;
+    const hintEl = document.getElementById('fsTargetHint');
+    if (hintEl) hintEl.textContent = `Target: {${fsTargetKey}} [${fsDataType}]`;
+    runFormulaStudioTest();
+  });
 
   // Helper insertion chips (functions, operators, arrays)
   document.querySelectorAll('#formulaStudioModal [data-insert]').forEach((chip) => {
@@ -2309,6 +2253,9 @@ function openFormulaStudio() {
 
   const hintEl = document.getElementById('fsTargetHint');
   if (hintEl) hintEl.textContent = `Target: {${fsTargetKey}} [${fsDataType}]`;
+
+  const dtSelect = document.getElementById('fsDataType');
+  if (dtSelect) dtSelect.value = fsDataType;
 
   // Render Variable Chips
   const chipsContainer = document.getElementById('fsVarChips');
@@ -2390,22 +2337,19 @@ function updateStudioTestInputs() {
 
   referencedVars.forEach((varKey) => {
     const vDef = variables.find((v) => v.key === varKey);
+    const vType = vDef?.dataType || 'String';
     let sampleVal = fsTestInputsState[varKey];
     if (sampleVal === undefined) {
       if (vDef && vDef.default_value) {
         sampleVal = vDef.default_value;
-      } else if (varKey.includes('ip')) {
+      } else if (vType === 'IP' || varKey.includes('ip') || varKey.includes('mask')) {
         sampleVal = '192.168.1.1';
-      } else if (varKey.includes('port')) {
-        sampleVal = '1/1/1:5';
-      } else if (varKey.includes('vlan')) {
-        sampleVal = '120';
-      } else if (varKey.includes('mask')) {
-        sampleVal = '255.255.255.248';
-      } else if (varKey.includes('onu')) {
-        sampleVal = '5';
+      } else if (vType === 'Port' || varKey.includes('port') || varKey.includes('olt')) {
+        sampleVal = '1/1/1:1';
+      } else if (vType === 'Number' || varKey.includes('idx') || varKey.includes('vlan')) {
+        sampleVal = '67';
       } else {
-        sampleVal = 'sample_value';
+        sampleVal = 'Hello World';
       }
       fsTestInputsState[varKey] = sampleVal;
     }
@@ -2502,6 +2446,11 @@ function applyFormulaStudio() {
   const vfFormula = document.getElementById('vfFormula');
   if (vfFormula) {
     vfFormula.value = formula;
+  }
+
+  const vfDataType = document.getElementById('vfDataType');
+  if (vfDataType) {
+    vfDataType.value = fsDataType;
   }
 
   closeFormulaStudio();
