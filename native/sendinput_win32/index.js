@@ -4,35 +4,43 @@ const os = require('os');
 const { spawn } = require('child_process');
 
 function resolveExePath() {
-  const candidates = [
-    // 1. Direct relative path (dev mode)
-    path.join(__dirname, '..', 'Win32Bridge.exe'),
-    // 2. asar unpacked path (packaged mode)
-    path.join(__dirname.replace('app.asar', 'app.asar.unpacked'), '..', 'Win32Bridge.exe'),
-    path.join(__dirname.replace('app.asar', 'app.asar.unpacked'), 'Win32Bridge.exe'),
-    // 3. resourcesPath candidates (NSIS & Portable)
-    process.resourcesPath ? path.join(process.resourcesPath, 'native', 'Win32Bridge.exe') : null,
-    process.resourcesPath ? path.join(process.resourcesPath, 'app.asar.unpacked', 'native', 'Win32Bridge.exe') : null,
-    process.resourcesPath ? path.join(process.resourcesPath, 'Win32Bridge.exe') : null,
-  ].filter(Boolean);
+  const isPackaged = __dirname.includes('app.asar');
 
-  for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
-  }
+  if (isPackaged) {
+    // 1. Try app.asar.unpacked
+    const unpacked = path.join(__dirname.replace('app.asar', 'app.asar.unpacked'), '..', 'Win32Bridge.exe');
+    if (fs.existsSync(unpacked)) return unpacked;
 
-  // 4. Fallback: If inside asar in a portable sandbox, extract to os.tmpdir() so spawn() always succeeds
-  try {
-    const tempExe = path.join(os.tmpdir(), 'FE_Macro_Win32Bridge_v13.exe');
-    if (fs.existsSync(tempExe)) return tempExe;
+    // 2. Try process.resourcesPath
+    if (process.resourcesPath) {
+      const resPath1 = path.join(process.resourcesPath, 'native', 'Win32Bridge.exe');
+      if (fs.existsSync(resPath1)) return resPath1;
+      const resPath2 = path.join(process.resourcesPath, 'app.asar.unpacked', 'native', 'Win32Bridge.exe');
+      if (fs.existsSync(resPath2)) return resPath2;
+      const resPath3 = path.join(process.resourcesPath, 'Win32Bridge.exe');
+      if (fs.existsSync(resPath3)) return resPath3;
+    }
 
-    const sourceAsarPath = path.join(__dirname, '..', 'Win32Bridge.exe');
-    if (fs.existsSync(sourceAsarPath)) {
-      const buf = fs.readFileSync(sourceAsarPath);
+    // 3. Fallback: Always extract from asar to os.tmpdir()
+    try {
+      const tempExe = path.join(os.tmpdir(), 'FE_Macro_Win32Bridge.exe');
+      const sourceInAsar = path.join(__dirname, '..', 'Win32Bridge.exe');
+      const buf = fs.readFileSync(sourceInAsar);
       fs.writeFileSync(tempExe, buf);
       return tempExe;
+    } catch (e) {
+      // ignore
     }
-  } catch (e) {
-    // ignore
+  }
+
+  // In dev mode (not in app.asar):
+  const devCandidates = [
+    path.join(__dirname, '..', 'Win32Bridge.exe'),
+    path.join(__dirname, '..', '..', 'native', 'Win32Bridge.exe'),
+    path.join(__dirname, 'native', 'Win32Bridge.exe'),
+  ];
+  for (const c of devCandidates) {
+    if (fs.existsSync(c)) return c;
   }
 
   return path.join(__dirname, '..', 'Win32Bridge.exe');
@@ -48,12 +56,17 @@ function startBridge() {
   if (!isSupported) return;
 
   const activeExe = resolveExePath();
-  if (!activeExe || !fs.existsSync(activeExe)) return;
+  if (!activeExe) return;
 
   try {
     bridgeProcess = spawn(activeExe, [], {
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
+    });
+
+    bridgeProcess.on('error', (err) => {
+      console.error('Win32Bridge spawn error:', err);
+      bridgeProcess = null;
     });
 
     bridgeProcess.stdout.on('data', (data) => {
