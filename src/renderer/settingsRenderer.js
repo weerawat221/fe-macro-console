@@ -2043,9 +2043,18 @@ function saveVariableForm() {
   const key = rawKey.toLowerCase().replace(/[^a-z0-9_]/g, '_');
   if (!label) { showToast('Field label is required'); return; }
 
+  const isNew = editingVarIndex === null;
+  const wasHidden = !isNew && Boolean(variables[editingVarIndex]?.hidden);
+
   const doSave = () => {
-    const isNew = editingVarIndex === null;
-    const varObj = { key, label, description, ...(default_value ? { default_value } : {}), ...(locked ? { locked } : {}), ...(hidden ? { hidden, locked: true } : {}) };
+    const varObj = {
+      key,
+      label,
+      description,
+      ...(default_value ? { default_value } : {}),
+      ...(locked || hidden ? { locked: true } : {}),
+      ...(hidden ? { hidden: true } : {}),
+    };
 
     if (isNew) {
       if (variables.some((v) => v.key.toLowerCase() === key)) {
@@ -2054,17 +2063,22 @@ function saveVariableForm() {
       }
       variables.push(varObj);
     } else {
-      variables[editingVarIndex] = { ...variables[editingVarIndex], ...varObj, key: variables[editingVarIndex].key };
+      variables[editingVarIndex] = {
+        ...variables[editingVarIndex],
+        ...varObj,
+        key: variables[editingVarIndex].key,
+      };
     }
 
     persistVariables();
     closeVariableForm();
     renderVariablesManager();
+    showToast(isNew ? `Variable "{${key}}" created!` : `Variable "{${key}}" updated!`);
   };
 
-  // If trying to create/edit a hidden variable, require admin password
-  if (hidden) {
-    requireAdminPassword(editingVarIndex === null ? 'Create Hidden Variable' : 'Save Hidden Variable', doSave);
+  // If trying to create a hidden variable or modifying an existing hidden variable, require admin password
+  if (hidden || wasHidden) {
+    requireAdminPassword(isNew ? 'Create Hidden Variable' : 'Save Hidden Variable', doSave);
   } else {
     doSave();
   }
@@ -2080,6 +2094,7 @@ function deleteVariableForm() {
     persistVariables();
     closeVariableForm();
     renderVariablesManager();
+    showToast(`Variable "{${v.key}}" deleted`);
   };
 
   if (v.hidden) {
@@ -2093,6 +2108,8 @@ function deleteVariableForm() {
 // ADMIN PASSWORD MODAL
 // =============================================================
 
+let adminSessionUntil = 0; // Timestamp when active admin authentication expires (2 mins)
+
 function initAdminPasswordModal() {
   document.getElementById('adminPwCancel').addEventListener('click', closeAdminPasswordModal);
   document.getElementById('adminPasswordModal').addEventListener('click', (e) => {
@@ -2102,27 +2119,46 @@ function initAdminPasswordModal() {
   document.getElementById('adminPwInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmAdminPassword();
   });
+  document.getElementById('adminPwConfirm')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmAdminPassword();
+  });
 }
 
 /**
  * Require admin password before running a callback.
- * If admin password has never been set, guide user through first-time setup.
+ * If user recently authenticated (within 2 mins), proceeds immediately.
+ * If admin password has never been set, guides user through first-time setup.
  */
-function requireAdminPassword(actionLabel, callback) {
+async function requireAdminPassword(actionLabel, callback) {
+  const adminHash = await window.feMacro.storeGet('adminPwHash', null);
+  adminIsSetup = Boolean(adminHash);
+
+  // If already authenticated within active session and setup is done, proceed directly
+  if (adminIsSetup && Date.now() < adminSessionUntil) {
+    if (callback) callback();
+    return;
+  }
+
   adminAuthCallback = callback;
   const msgEl = document.getElementById('adminPwMessage');
   const setupNote = document.getElementById('adminPwSetupNote');
   const titleEl = document.getElementById('adminPwTitle');
-  titleEl.textContent = `🔐 ${actionLabel}`;
-  msgEl.textContent = adminIsSetup
-    ? 'Enter admin password to continue.'
-    : 'No admin password set yet. Create one now.';
-  setupNote.style.display = adminIsSetup ? 'none' : 'block';
-  document.getElementById('adminPwInput').value = '';
-  document.getElementById('adminPwError').style.display = 'none';
-  if (document.getElementById('adminPwConfirm')) document.getElementById('adminPwConfirm').value = '';
+  if (titleEl) titleEl.textContent = `🔐 ${actionLabel}`;
+  if (msgEl) {
+    msgEl.textContent = adminIsSetup
+      ? 'Enter admin password to continue.'
+      : 'No admin password set yet. Create one now.';
+  }
+  if (setupNote) setupNote.style.display = adminIsSetup ? 'none' : 'block';
+  const pwInput = document.getElementById('adminPwInput');
+  if (pwInput) pwInput.value = '';
+  const errEl = document.getElementById('adminPwError');
+  if (errEl) errEl.style.display = 'none';
+  const confirmInput = document.getElementById('adminPwConfirm');
+  if (confirmInput) confirmInput.value = '';
+
   document.getElementById('adminPasswordModal').classList.remove('modal-overlay--hidden');
-  setTimeout(() => document.getElementById('adminPwInput').focus(), 50);
+  setTimeout(() => pwInput?.focus(), 50);
 }
 
 function closeAdminPasswordModal() {
@@ -2133,21 +2169,27 @@ function closeAdminPasswordModal() {
 async function confirmAdminPassword() {
   const password = document.getElementById('adminPwInput').value;
   const errEl = document.getElementById('adminPwError');
-  errEl.style.display = 'none';
+  if (errEl) errEl.style.display = 'none';
 
   // Validate: alphanumeric only, 6+ chars
   if (!/^[a-zA-Z0-9]{6,}$/.test(password)) {
-    errEl.textContent = 'Password must be at least 6 alphanumeric characters.';
-    errEl.style.display = 'block';
+    if (errEl) {
+      errEl.textContent = 'Password must be at least 6 alphanumeric characters.';
+      errEl.style.display = 'block';
+    }
     return;
   }
+
+  const cb = adminAuthCallback;
 
   if (!adminIsSetup) {
     // First-time: verify confirmation matches
     const confirm = document.getElementById('adminPwConfirm').value;
     if (password !== confirm) {
-      errEl.textContent = 'Passwords do not match.';
-      errEl.style.display = 'block';
+      if (errEl) {
+        errEl.textContent = 'Passwords do not match.';
+        errEl.style.display = 'block';
+      }
       return;
     }
     // Hash and store the new admin password
@@ -2155,24 +2197,29 @@ async function confirmAdminPassword() {
     await window.feMacro.storeSet('adminPwHash', hash);
     await window.feMacro.storeSet('adminPwSalt', salt);
     adminIsSetup = true;
+    adminSessionUntil = Date.now() + 2 * 60 * 1000; // 2 min session
     closeAdminPasswordModal();
-    if (adminAuthCallback) adminAuthCallback();
-    adminAuthCallback = null;
+    if (cb) cb();
   } else {
     // Verify existing password
     const storedHash = await window.feMacro.storeGet('adminPwHash', null);
     const storedSalt = await window.feMacro.storeGet('adminPwSalt', null);
     const ok = storedHash && storedSalt ? await verifyPassword(password, storedHash, storedSalt) : false;
     if (!ok) {
-      errEl.textContent = 'Incorrect password. Try again.';
-      errEl.style.display = 'block';
-      document.getElementById('adminPwInput').value = '';
-      document.getElementById('adminPwInput').focus();
+      if (errEl) {
+        errEl.textContent = 'Incorrect password. Try again.';
+        errEl.style.display = 'block';
+      }
+      const pwInput = document.getElementById('adminPwInput');
+      if (pwInput) {
+        pwInput.value = '';
+        pwInput.focus();
+      }
       return;
     }
+    adminSessionUntil = Date.now() + 2 * 60 * 1000; // 2 min session
     closeAdminPasswordModal();
-    if (adminAuthCallback) adminAuthCallback();
-    adminAuthCallback = null;
+    if (cb) cb();
   }
 }
 
@@ -2186,6 +2233,12 @@ function initExportPasswordModal() {
     if (e.target.id === 'exportPasswordModal') closeExportPasswordModal();
   });
   document.getElementById('exportPwConfirmBtn').addEventListener('click', confirmExportPassword);
+  document.getElementById('exportPwInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmExportPassword();
+  });
+  document.getElementById('exportPwConfirm').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmExportPassword();
+  });
 }
 
 function openExportPasswordModal() {

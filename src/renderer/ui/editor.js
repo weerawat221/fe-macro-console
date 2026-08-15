@@ -1593,7 +1593,14 @@ function saveVariableForm() {
   if (!label) { showError('Field label is required'); return; }
 
   const isNew = editingVarIndex === null;
-  const varObj = { key, label, description, ...(default_value ? { default_value } : {}), ...(locked ? { locked } : {}), ...(hidden ? { hidden, locked: true } : {}) };
+  const varObj = {
+    key,
+    label,
+    description,
+    ...(default_value ? { default_value } : {}),
+    ...(locked || hidden ? { locked: true } : {}),
+    ...(hidden ? { hidden: true } : {}),
+  };
 
   if (isNew) {
     if (state.variables.some((v) => v.key.toLowerCase() === key)) {

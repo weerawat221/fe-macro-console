@@ -630,6 +630,10 @@ select {
   display: none;
 }
 
+.modal-overlay--top {
+  z-index: 100;
+}
+
 .modal {
   background: var(--bg-panel);
   border: 1px solid var(--border-strong);
