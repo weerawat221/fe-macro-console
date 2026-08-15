@@ -145,8 +145,10 @@ function buildColumn(fieldDefs, tab) {
     input.type = def.hidden ? 'password' : 'text';
     input.autocomplete = 'off';
     input.spellcheck = false;
-    input.placeholder = def.description || (hasFormula ? 'Auto-calculated' : '');
-    input.value = tab.values[def.key] || '';
+    const currentVal = (tab.values[def.key] !== undefined && tab.values[def.key] !== null && tab.values[def.key] !== '')
+      ? tab.values[def.key]
+      : (def.default_value !== undefined && def.default_value !== null ? def.default_value : '');
+    input.value = currentVal;
 
     if (hasFormula) {
       input.readOnly = true;

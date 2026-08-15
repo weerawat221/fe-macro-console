@@ -15,6 +15,19 @@ export function recalculateActiveTabVariables(tab) {
   if (!tab) return;
   if (!tab.values) tab.values = {};
   const varDefs = Array.isArray(state.variables) ? state.variables : [];
+
+  // Populate default values into tab.values for any variable that has a default_value if not yet set
+  varDefs.forEach((def) => {
+    if (
+      (tab.values[def.key] === undefined || tab.values[def.key] === null || tab.values[def.key] === '') &&
+      def.default_value !== undefined &&
+      def.default_value !== null &&
+      def.default_value !== ''
+    ) {
+      tab.values[def.key] = def.default_value;
+    }
+  });
+
   const recalcRes = recalculateVariables(varDefs, tab.values);
   tab.values = recalcRes.values;
   return recalcRes;
@@ -60,8 +73,23 @@ export function initTabBar() {
 export async function loadTabsFromStore() {
   const savedTabs = await window.feMacro.storeGet('tabs', []);
   const savedActiveId = await window.feMacro.storeGet('activeTabId', null);
+  const varDefs = Array.isArray(state.variables) ? state.variables : [];
 
   if (Array.isArray(savedTabs) && savedTabs.length > 0) {
+    savedTabs.forEach((tab) => {
+      if (!tab.values) tab.values = {};
+      varDefs.forEach((def) => {
+        if (
+          (tab.values[def.key] === undefined || tab.values[def.key] === null || tab.values[def.key] === '') &&
+          def.default_value !== undefined &&
+          def.default_value !== null &&
+          def.default_value !== ''
+        ) {
+          tab.values[def.key] = def.default_value;
+        }
+      });
+    });
+
     setState({
       tabs: savedTabs,
       activeTabId: savedTabs.some((t) => t.id === savedActiveId) ? savedActiveId : savedTabs[0].id,
@@ -75,6 +103,13 @@ export async function loadTabsFromStore() {
 
 export function addNewTab() {
   const tab = { id: makeId('tab'), name: 'New Tab', values: {} };
+  const varDefs = Array.isArray(state.variables) ? state.variables : [];
+  varDefs.forEach((def) => {
+    if (def.default_value !== undefined && def.default_value !== null && def.default_value !== '') {
+      tab.values[def.key] = def.default_value;
+    }
+  });
+
   recalculateActiveTabVariables(tab);
   setState({ tabs: [...state.tabs, tab], activeTabId: tab.id });
   renderTabBar();
@@ -130,13 +165,22 @@ export function clearInputs() {
   const tab = getActiveTab();
   if (!tab) return;
 
-  // Preserve values of locked variables
-  const lockedKeys = new Set(
-    (state.variables || []).filter((v) => v.locked).map((v) => v.key)
-  );
+  const varDefs = Array.isArray(state.variables) ? state.variables : [];
+  const lockedKeys = new Set(varDefs.filter((v) => v.locked).map((v) => v.key));
   const preserved = {};
+
+  // Preserve values of locked variables
   Object.entries(tab.values || {}).forEach(([k, val]) => {
     if (lockedKeys.has(k)) preserved[k] = val;
+  });
+
+  // Re-populate default values for non-locked variables
+  varDefs.forEach((def) => {
+    if (def.default_value !== undefined && def.default_value !== null && def.default_value !== '') {
+      if (preserved[def.key] === undefined || preserved[def.key] === null || preserved[def.key] === '') {
+        preserved[def.key] = def.default_value;
+      }
+    }
   });
 
   tab.values = preserved;
