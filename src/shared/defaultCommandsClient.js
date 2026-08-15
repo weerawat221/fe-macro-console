@@ -5,7 +5,8 @@ export const DEFAULT_COMMAND_SETS = {
   RDM: {
     name: 'Remote Desktop Manager',
     process: 'RemoteDesktopManager.exe',
-    keywords: ['RDM', 'REMOTE', 'DESKTOP', 'TABBY', 'MSTS'],
+    processes: ['RemoteDesktopManager.exe', 'mstsc.exe', 'putty.exe', 'kitty.exe', 'SecureCRT.exe', 'Tabby.exe'],
+    keywords: ['RDM', 'REMOTE', 'DESKTOP', 'TABBY', 'MSTS', 'PUTTY', 'KITTY', 'SECURT', 'SSH'],
     submodes: {
       AP: {
         name: 'AP',
@@ -90,6 +91,7 @@ export const DEFAULT_COMMAND_SETS = {
   LINE: {
     name: 'LINE',
     process: 'LINE.exe',
+    processes: ['LINE.exe', 'Line.exe'],
     keywords: ['LINE'],
     submodes: {
       DEFAULT: {
@@ -148,7 +150,8 @@ export const DEFAULT_COMMAND_SETS = {
   WINDOWS_CMD: {
     name: 'Windows CMD / Terminal',
     process: 'cmd.exe',
-    keywords: ['CMD', 'TERMINAL', 'POWERSHELL'],
+    processes: ['cmd.exe', 'powershell.exe', 'pwsh.exe', 'WindowsTerminal.exe', 'conhost.exe'],
+    keywords: ['CMD', 'TERMINAL', 'POWERSHELL', 'COMMAND PROMPT', 'WINDOWS TERMINAL'],
     submodes: {
       DEFAULT: {
         name: 'Terminal',
@@ -170,7 +173,8 @@ export const DEFAULT_COMMAND_SETS = {
   FORTI_CLIENT: {
     name: 'FortiClient',
     process: 'FortiClient.exe',
-    keywords: ['FORTI'],
+    processes: ['FortiClient.exe', 'FortiSSLVPN.exe', 'FortiClientConsole.exe'],
+    keywords: ['FORTI', 'FORTICLIENT', 'VPN'],
     submodes: {
       DEFAULT: {
         name: 'Account',
@@ -183,7 +187,8 @@ export const DEFAULT_COMMAND_SETS = {
   BROWSER: {
     name: 'Web Browser / Config',
     process: 'chrome.exe',
-    keywords: ['CHROME', 'EDGE', 'FIREFOX', 'ANYDESK'],
+    processes: ['chrome.exe', 'msedge.exe', 'firefox.exe', 'brave.exe', 'opera.exe', 'AnyDesk.exe'],
+    keywords: ['CHROME', 'EDGE', 'MSEDGE', 'FIREFOX', 'ANYDESK', 'BROWSER', 'GOOGLE CHROME', 'MICROSOFT EDGE'],
     submodes: {
       DEFAULT: {
         name: 'Web Access',
@@ -217,23 +222,21 @@ export const DEFAULT_COMMAND_SETS = {
 };
 
 export const DEFAULT_VARIABLES = [
-  // --- User-visible input variables ---
-  { key: 'sr_ap', label: 'SR Name (AP)', description: 'Service Request Name for AP' },
-  { key: 'group_id', label: 'ID (AP)', description: 'Group ID for AP' },
-  { key: 'group_name', label: 'Group Name (AP)', description: 'AP Group Name' },
-  { key: 'stelnet_ip', label: 'Stelnet IP (AP)', description: 'Stelnet IP Address' },
-  { key: 'lan_ip', label: 'LAN IP (Config)', description: 'LAN IP Address for router/device setup' },
-  { key: 'sr_onu', label: 'SR Full Name (ONU)', description: 'Service Request Name for ONU' },
-  { key: 'port', label: 'Port (1/1/1:x) (ONU)', description: 'OLT Port and ONU ID' },
-  { key: 'vlan', label: 'VLAN (ONU)', description: 'VLAN ID' },
-  { key: 'ce_ip', label: 'CE IP (ONU)', description: 'Customer Edge IP' },
-  { key: 'pe_ip', label: 'PE IP (ONU)', description: 'Provider Edge IP' },
-  { key: 'captcha', label: 'CAPTCHA (ID)', description: 'Browser Captcha / Login code' },
-  // --- System variables (computed / constant — editable default_value) ---
-  { key: 'lan_mask', label: 'LAN Mask', description: 'Subnet mask for LAN config', default_value: '255.255.255.248', system: true },
-  { key: 'mask',     label: 'Mask (alias of lan_mask)', description: 'Alias for lan_mask', default_value: '255.255.255.248', system: true },
-  { key: 'olt',      label: 'OLT (auto from Port)', description: 'Auto-split from {port} before ":"', formula: 'port.split(":")[0]', system: true, readonly: true },
-  { key: 'onu_idx',  label: 'ONU Index (auto from Port)', description: 'Auto-split from {port} after ":"', formula: 'port.split(":")[1]', system: true, readonly: true },
+  { key: 'sr_ap', label: 'SR (AP)', description: 'Service Request for AP' },
+  { key: 'group_id', label: 'Group ID (AP)', description: 'AP Group Identifier' },
+  { key: 'group_name', label: 'Group Name', description: 'AP Group Name' },
+  { key: 'stelnet_ip', label: 'Stelnet IP', description: 'Stelnet Management IP' },
+  { key: 'port', label: 'Port (OLT)', description: 'OLT Port in slot/card/port:onu_idx format (e.g. 1/1/1:5)' },
+  { key: 'olt', label: 'OLT Port', description: 'OLT base port (e.g. 1/1/1)', formula: 'port.split(":")[0]', system: true },
+  { key: 'onu_idx', label: 'ONU Index', description: 'ONU Index (e.g. 5)', formula: 'port.split(":")[1]', system: true },
+  { key: 'sr_onu', label: 'SR (ONU)', description: 'Service Request for ONU' },
+  { key: 'vlan', label: 'VLAN', description: 'VLAN Identifier (e.g. 120)' },
+  { key: 'ce_ip', label: 'CE IP', description: 'Customer Edge IP' },
+  { key: 'pe_ip', label: 'PE IP', description: 'Provider Edge IP' },
+  { key: 'lan_ip', label: 'LAN IP', description: 'LAN Network Base IP (e.g. 192.168.1.0)' },
+  { key: 'lan_mask', label: 'LAN Mask', description: 'Subnet Mask for LAN network', default_value: '255.255.255.248', system: true },
+  { key: 'mask', label: 'Mask (Alias)', description: 'Alias for LAN Mask', default_value: '255.255.255.248', system: true },
+  { key: 'captcha', label: 'Captcha', description: 'Login Captcha Code' },
 ];
 
 export function normalizeVariables(stored) {
@@ -246,24 +249,24 @@ export function normalizeVariables(stored) {
         key: v.key,
         label: v.label || v.key,
         description: v.description || '',
-        ...(v.locked ? { locked: true } : {}),
-        ...(v.hidden ? { hidden: true } : {}),
-        ...(v.system ? { system: v.system } : {}),
-        ...(v.readonly ? { readonly: v.readonly } : {}),
-        ...(v.formula ? { formula: v.formula } : {}),
-        ...(v.default_value !== undefined ? { default_value: v.default_value } : {}),
+        locked: !!v.locked,
+        hidden: !!v.hidden,
+        formula: v.formula || null,
+        default_value: v.default_value !== undefined ? v.default_value : null,
+        system: !!v.system,
       });
     }
   });
 
-  // Ensure all default variables are present (add missing ones)
+  // Ensure default system variables are present
   DEFAULT_VARIABLES.forEach((def) => {
     if (!keyMap.has(def.key)) {
       keyMap.set(def.key, def);
-    } else if (def.system) {
-      // Re-apply system metadata in case it was stripped during older store save
+    } else {
       const existing = keyMap.get(def.key);
-      keyMap.set(def.key, { ...def, ...existing, system: true });
+      if (def.formula && !existing.formula) existing.formula = def.formula;
+      if (def.default_value && !existing.default_value) existing.default_value = def.default_value;
+      if (def.system) existing.system = true;
     }
   });
 
@@ -272,46 +275,37 @@ export function normalizeVariables(stored) {
 
 export function normalizeCommandSets(stored) {
   if (!stored || typeof stored !== 'object') return DEFAULT_COMMAND_SETS;
+
   const firstVal = Object.values(stored)[0];
-  if (firstVal && firstVal.submodes) {
-    if (stored.BROWSER && stored.BROWSER.submodes && stored.BROWSER.submodes.DEFAULT) {
-      const groups = stored.BROWSER.submodes.DEFAULT.groups;
-      if (groups && !groups['LAN Configuration']) {
-        groups['LAN Configuration'] = [
-          { label: 'Blue Config (ProComm)', template: '{lan_ip:blue_full}', popup: null, autoFocus: true },
-          { label: 'Green Config (One-shot)', template: '{lan_ip}\t{lan_mask}\t\t{lan_ip+1}\t{lan_ip+2}\t\t{lan_ip}\t\t\t{lan_ip}', popup: null, autoFocus: true },
-        ];
+  let result = stored;
+  if (!firstVal || !firstVal.submodes) {
+    // Legacy format conversion
+    result = JSON.parse(JSON.stringify(DEFAULT_COMMAND_SETS));
+    for (const [key, groups] of Object.entries(stored)) {
+      if (key.startsWith('RDM_')) {
+        const sub = key.replace('RDM_', '');
+        if (result.RDM && result.RDM.submodes[sub]) {
+          result.RDM.submodes[sub].groups = groups;
+        }
+      } else if (result[key]) {
+        const firstSub = Object.keys(result[key].submodes)[0];
+        if (firstSub) {
+          result[key].submodes[firstSub].groups = groups;
+        }
       }
     }
-    return stored;
   }
 
-  // Legacy format conversion
-  const result = JSON.parse(JSON.stringify(DEFAULT_COMMAND_SETS));
-  for (const [key, groups] of Object.entries(stored)) {
-    if (key.startsWith('RDM_')) {
-      const sub = key.replace('RDM_', '');
-      if (result.RDM && result.RDM.submodes[sub]) {
-        result.RDM.submodes[sub].groups = groups;
-      }
-    } else if (result[key]) {
-      const firstSub = Object.keys(result[key].submodes)[0];
-      if (firstSub) {
-        result[key].submodes[firstSub].groups = groups;
-      }
+  // Ensure default apps have their process/processes/keywords populated if missing
+  Object.entries(DEFAULT_COMMAND_SETS).forEach(([key, defApp]) => {
+    if (!result[key]) {
+      result[key] = JSON.parse(JSON.stringify(defApp));
     } else {
-      result[key] = {
-        name: key,
-        process: `${key}.exe`,
-        keywords: [key],
-        submodes: {
-          DEFAULT: {
-            name: 'Default',
-            groups: groups,
-          },
-        },
-      };
+      if (!result[key].process && defApp.process) result[key].process = defApp.process;
+      if (!result[key].processes && defApp.processes) result[key].processes = [...defApp.processes];
+      if (!result[key].keywords && defApp.keywords) result[key].keywords = [...defApp.keywords];
     }
-  }
+  });
+
   return result;
 }

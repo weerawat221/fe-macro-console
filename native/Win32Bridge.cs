@@ -14,10 +14,10 @@ namespace Win32Bridge {
         [DllImport("user32.dll")]
         static extern IntPtr GetForegroundWindow();
 
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         static extern int GetWindowTextLength(IntPtr hWnd);
 
         [DllImport("user32.dll")]
@@ -372,11 +372,22 @@ namespace Win32Bridge {
 
         static void Main(string[] args) {
             try { SetProcessDPIAware(); } catch {}
-            Console.OutputEncoding = Encoding.UTF8;
-            Console.InputEncoding = Encoding.UTF8;
+            try { Console.OutputEncoding = new UTF8Encoding(false); } catch {}
+            try { Console.InputEncoding = new UTF8Encoding(false); } catch {}
+
+            TextReader reader = null;
+            TextWriter writer = null;
+
+            try {
+                reader = new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false));
+                writer = new StreamWriter(Console.OpenStandardOutput(), new UTF8Encoding(false)) { AutoFlush = true };
+            } catch {
+                reader = Console.In;
+                writer = Console.Out;
+            }
 
             string line;
-            while ((line = Console.ReadLine()) != null) {
+            while ((line = reader.ReadLine()) != null) {
                 line = line.Trim();
                 if (line == "exit" || line == "quit") break;
                 if (string.IsNullOrEmpty(line)) continue;
@@ -388,7 +399,7 @@ namespace Win32Bridge {
                     if (cmd == "GET_FOREGROUND") {
                         IntPtr hwnd = GetForegroundWindow();
                         if (hwnd == IntPtr.Zero) {
-                            Console.WriteLine("{\"ok\":true,\"hwnd\":0,\"title\":\"\",\"processName\":\"\"}");
+                            writer.WriteLine("{\"ok\":true,\"hwnd\":0,\"title\":\"\",\"processName\":\"\"}");
                             continue;
                         }
 
@@ -404,14 +415,14 @@ namespace Win32Bridge {
                             procName = Process.GetProcessById((int)pid).ProcessName;
                         } catch {}
 
-                        Console.WriteLine(string.Format("{{\"ok\":true,\"hwnd\":{0},\"title\":\"{1}\",\"processName\":\"{2}\",\"pid\":{3}}}",
+                        writer.WriteLine(string.Format("{{\"ok\":true,\"hwnd\":{0},\"title\":\"{1}\",\"processName\":\"{2}\",\"pid\":{3}}}",
                             hwnd.ToInt64(), EscapeJson(title), EscapeJson(procName), pid));
                     }
                     else if (cmd == "FOCUS_HWND") {
                         long hwndVal = long.Parse(parts[1]);
                         IntPtr hwnd = new IntPtr(hwndVal);
                         bool ok = RobustFocusWindow(hwnd);
-                        Console.WriteLine(string.Format("{{\"ok\":{0}}}", ok ? "true" : "false"));
+                        writer.WriteLine(string.Format("{{\"ok\":{0}}}", ok ? "true" : "false"));
                     }
                     else if (cmd == "FOCUS_QUERY") {
                         string[] queries = new string[parts.Length - 1];
@@ -420,9 +431,9 @@ namespace Win32Bridge {
                         IntPtr hwnd = FindWindowByQueries(queries);
                         if (hwnd != IntPtr.Zero) {
                             RobustFocusWindow(hwnd);
-                            Console.WriteLine(string.Format("{{\"ok\":true,\"hwnd\":{0}}}", hwnd.ToInt64()));
+                            writer.WriteLine(string.Format("{{\"ok\":true,\"hwnd\":{0}}}", hwnd.ToInt64()));
                         } else {
-                            Console.WriteLine("{\"ok\":false,\"reason\":\"Window not found\"}");
+                            writer.WriteLine("{\"ok\":false,\"reason\":\"Window not found\"}");
                         }
                     }
                     else if (cmd == "FOCUS_AND_SEND_B64") {
@@ -449,20 +460,20 @@ namespace Win32Bridge {
                         string text = Encoding.UTF8.GetString(bytes);
                         SendStringAtomic(text);
 
-                        Console.WriteLine(string.Format("{{\"ok\":true,\"hwnd\":{0}}}", hwnd.ToInt64()));
+                        writer.WriteLine(string.Format("{{\"ok\":true,\"hwnd\":{0}}}", hwnd.ToInt64()));
                     }
                     else if (cmd == "SEND_B64") {
                         string b64 = parts.Length > 1 ? parts[1] : "";
                         byte[] bytes = Convert.FromBase64String(b64);
                         string text = Encoding.UTF8.GetString(bytes);
                         SendStringAtomic(text);
-                        Console.WriteLine("{\"ok\":true}");
+                        writer.WriteLine("{\"ok\":true}");
                     }
                     else if (cmd == "IS_WINDOW") {
                         long hwndVal = long.Parse(parts[1]);
                         IntPtr hwnd = new IntPtr(hwndVal);
                         bool ok = IsWindow(hwnd);
-                        Console.WriteLine(string.Format("{{\"ok\":true,\"valid\":{0}}}", ok ? "true" : "false"));
+                        writer.WriteLine(string.Format("{{\"ok\":true,\"valid\":{0}}}", ok ? "true" : "false"));
                     }
                     else if (cmd == "LIST_WINDOWS") {
                         List<string> list = new List<string>();
@@ -487,7 +498,7 @@ namespace Win32Bridge {
                             }
                             return true;
                         }, IntPtr.Zero);
-                        Console.WriteLine("[" + string.Join(",", list.ToArray()) + "]");
+                        writer.WriteLine("[" + string.Join(",", list.ToArray()) + "]");
                     }
                     else if (cmd == "SCREENSHOT" || cmd == "SCREENSHOT_RECT" || cmd == "SCREENSHOT_POINT") {
                         int left = 0;
@@ -539,7 +550,7 @@ namespace Win32Bridge {
                                 bmp.Save(ms, ImageFormat.Png);
                                 byte[] bytes = ms.ToArray();
                                 string b64 = Convert.ToBase64String(bytes);
-                                Console.WriteLine(string.Format("{{\"ok\":true,\"left\":{0},\"top\":{1},\"width\":{2},\"height\":{3},\"dataUrl\":\"data:image/png;base64,{4}\"}}",
+                                writer.WriteLine(string.Format("{{\"ok\":true,\"left\":{0},\"top\":{1},\"width\":{2},\"height\":{3},\"dataUrl\":\"data:image/png;base64,{4}\"}}",
                                     left, top, width, height, b64));
                             }
                         }
@@ -549,10 +560,10 @@ namespace Win32Bridge {
                         ReleaseDC(hDesk, hDeskDC);
                     }
                     else {
-                        Console.WriteLine("{\"ok\":false,\"reason\":\"Unknown command\"}");
+                        writer.WriteLine("{\"ok\":false,\"reason\":\"Unknown command\"}");
                     }
                 } catch (Exception ex) {
-                    Console.WriteLine(string.Format("{{\"ok\":false,\"error\":\"{0}\"}}", EscapeJson(ex.Message)));
+                    writer.WriteLine(string.Format("{{\"ok\":false,\"error\":\"{0}\"}}", EscapeJson(ex.Message)));
                 }
             }
         }
