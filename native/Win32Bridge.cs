@@ -343,7 +343,7 @@ namespace Win32Bridge {
                 GetWindowText(hWnd, sb, len + 1);
                 string title = sb.ToString().ToUpper();
 
-                if (title.Contains("FE MACRO CONSOLE")) return true;
+                if (title.Contains("FE MACRO CONSOLE") || title.Contains("SCREEN OCR")) return true;
 
                 uint pid;
                 GetWindowThreadProcessId(hWnd, out pid);
@@ -352,11 +352,11 @@ namespace Win32Bridge {
                     procName = Process.GetProcessById((int)pid).ProcessName.ToUpper();
                 } catch {}
 
-                if (procName == "ELECTRON" || procName == "NODE") return true;
+                if (procName == "ELECTRON" || procName == "NODE" || procName.Contains("FE-MACRO") || procName.Contains("WIN32BRIDGE")) return true;
 
                 foreach (string q in cleanQueries) {
                     string cleanQ = q.Replace(".EXE", "");
-                    if (procName == cleanQ || procName == q) {
+                    if (procName == cleanQ || procName == q || procName.StartsWith(cleanQ) || cleanQ.StartsWith(procName)) {
                         bestMatch = hWnd;
                         return false;
                     }

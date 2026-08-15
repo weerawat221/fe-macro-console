@@ -34,7 +34,7 @@ function updateCachedCommandSets() {
 
 function detectModeFromWindow(title, processName) {
   const titleUpper = (title || '').toUpperCase();
-  const procUpper = (processName || '').toUpperCase();
+  const procUpper = (processName || '').toUpperCase().replace(/\.EXE$/i, '');
 
   for (const [modeKey, appConfig] of Object.entries(cachedCommandSets)) {
     const keyUpper = modeKey.toUpperCase();
@@ -42,21 +42,23 @@ function detectModeFromWindow(title, processName) {
     const keywords = (appConfig.keywords || []).map((k) => String(k).toUpperCase());
 
     const procs = [];
-    if (appConfig.process) procs.push(appConfig.process);
-    if (Array.isArray(appConfig.processes)) procs.push(...appConfig.processes);
+    if (appConfig.process) procs.push(String(appConfig.process).toUpperCase().replace(/\.EXE$/i, ''));
+    if (Array.isArray(appConfig.processes)) {
+      appConfig.processes.forEach((p) => procs.push(String(p).toUpperCase().replace(/\.EXE$/i, '')));
+    }
 
-    // 1. Process name match (e.g. "LINE.EXE", "REMOTEDESKTOPMANAGER.EXE", "CMD.EXE")
+    // 1. Process name match (e.g. "LINE", "REMOTEDESKTOPMANAGER", "CMD", "CHROME", "PUTTY", "TABBY")
     if (
       procs.some((p) => {
-        const u = String(p).toUpperCase();
-        return procUpper === u || procUpper.startsWith(u.replace(/\.EXE$/i, ''));
+        if (!p) return false;
+        return procUpper === p || procUpper.startsWith(p) || p.startsWith(procUpper);
       })
     ) {
       return modeKey;
     }
 
     // 2. Keyword match in title or process
-    if (keywords.some((k) => titleUpper.includes(k) || procUpper.includes(k))) {
+    if (keywords.some((k) => k && (titleUpper.includes(k) || procUpper.includes(k)))) {
       return modeKey;
     }
 
@@ -66,7 +68,7 @@ function detectModeFromWindow(title, processName) {
     }
 
     // 4. Mode key match in title
-    if (titleUpper.includes(keyUpper)) {
+    if (keyUpper && titleUpper.includes(keyUpper)) {
       return modeKey;
     }
   }
@@ -74,10 +76,50 @@ function detectModeFromWindow(title, processName) {
   return null;
 }
 
+function isOurOwnWindow(info) {
+  if (!info) return true;
+  const procLower = (info.processName || '').toLowerCase().replace(/\.exe$/i, '');
+  const titleLower = (info.title || '').toLowerCase();
+
+  // 1. Check known process names for our app
+  if (
+    procLower === 'electron' ||
+    procLower === 'fe-macro-console' ||
+    procLower === 'fe_macro_win32bridge' ||
+    procLower === 'win32bridge' ||
+    procLower === 'node'
+  ) {
+    return true;
+  }
+
+  // 2. Check known titles
+  if (
+    titleLower.includes('fe macro console') ||
+    titleLower.includes('screen ocr') ||
+    titleLower.startsWith('setting')
+  ) {
+    return true;
+  }
+
+  // 3. Check native window handles of all open Electron windows
+  const allWins = BrowserWindow.getAllWindows();
+  for (const w of allWins) {
+    if (!w.isDestroyed()) {
+      try {
+        const handleBuf = w.getNativeWindowHandle();
+        const hInt = handleBuf.readInt32LE ? handleBuf.readInt32LE(0) : handleBuf.readInt64LE(0);
+        if (hInt && Number(info.hwnd) === Number(hInt)) {
+          return true;
+        }
+      } catch {}
+    }
+  }
+
+  return false;
+}
+
 function startFocusTracker() {
   if (trackerInterval) return;
-
-  const myPid = process.pid;
 
   trackerInterval = setInterval(async () => {
     if (!win32.isSupported) return;
@@ -88,13 +130,7 @@ function startFocusTracker() {
       if (!info || !info.hwnd || info.hwnd === 0) return;
 
       // Ignore our own FE Macro Console window so clicking a button doesn't lose target
-      const titleLower = (info.title || '').toLowerCase();
-      if (
-        info.pid === myPid ||
-        titleLower.includes('fe macro console') ||
-        info.processName === 'electron.exe' ||
-        info.processName === 'fe-macro-console.exe'
-      ) {
+      if (isOurOwnWindow(info)) {
         return;
       }
 
@@ -113,9 +149,10 @@ function startFocusTracker() {
             hwnd: info.hwnd,
           });
         }
-      } else if (info.hwnd !== currentTargetHwnd) {
+      } else {
+        const changed = info.hwnd !== currentTargetHwnd;
         currentTargetHwnd = info.hwnd;
-        if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+        if (changed && mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
           mainWindow.webContents.send('focus:changed', {
             mode: null,
             title: info.title,
@@ -127,7 +164,7 @@ function startFocusTracker() {
     } catch (err) {
       // Ignore transient query error
     }
-  }, TRACKER_POLL_MS);
+  }, 250);
 }
 
 function stopFocusTracker() {
@@ -223,16 +260,18 @@ async function focusAppWindow(appKey) {
   const targetKey = appKey || lastDetectedMode;
   const queries = getQueriesForApp(targetKey);
 
+  // 1. If we have a valid tracked HWND for the target app, focus it directly
+  if (currentTargetHwnd && (await win32.isWindow(currentTargetHwnd))) {
+    const ok = await win32.focusWindow(currentTargetHwnd);
+    if (ok) return { ok: true, hwnd: currentTargetHwnd };
+  }
+
+  // 2. Query fallback (process names / window title keywords)
   const res = await win32.focusWindowByQueries(queries);
   if (res && res.ok && res.hwnd) {
     currentTargetHwnd = res.hwnd;
     lastDetectedMode = targetKey;
     return { ok: true, hwnd: res.hwnd };
-  }
-
-  if (currentTargetHwnd && (await win32.isWindow(currentTargetHwnd))) {
-    const ok = await win32.focusWindow(currentTargetHwnd);
-    if (ok) return { ok: true, hwnd: currentTargetHwnd };
   }
 
   return { ok: false, reason: `Could not find active window for ${targetKey}` };
