@@ -271,16 +271,16 @@ async function handleImportConfig() {
 }
 
 function initConflictModal() {
-  document.getElementById('conflictCancel').addEventListener('click', closeConflictModal);
-  document.getElementById('conflictConfirm').addEventListener('click', confirmApplyImportWithConflicts);
+  document.getElementById('conflictCancel')?.addEventListener('click', closeConflictModal);
+  document.getElementById('conflictConfirm')?.addEventListener('click', confirmApplyImportWithConflicts);
 
-  document.getElementById('btnConflictAllOverwrite').addEventListener('click', () => {
+  document.getElementById('btnConflictAllOverwrite')?.addEventListener('click', () => {
     setAllConflictRadios('overwrite');
   });
-  document.getElementById('btnConflictAllKeepBoth').addEventListener('click', () => {
+  document.getElementById('btnConflictAllKeepBoth')?.addEventListener('click', () => {
     setAllConflictRadios('keep_both');
   });
-  document.getElementById('btnConflictAllSkip').addEventListener('click', () => {
+  document.getElementById('btnConflictAllSkip')?.addEventListener('click', () => {
     setAllConflictRadios('skip');
   });
 }
@@ -577,8 +577,8 @@ function removeProcFromSet(procName) {
 }
 
 function initAddProcModal() {
-  document.getElementById('addProcCancel').addEventListener('click', closeAddProcModal);
-  document.getElementById('addProcConfirm').addEventListener('click', confirmAddProcToSet);
+  document.getElementById('addProcCancel')?.addEventListener('click', closeAddProcModal);
+  document.getElementById('addProcConfirm')?.addEventListener('click', confirmAddProcToSet);
 }
 
 async function openAddProcModal() {
@@ -704,9 +704,9 @@ function renderEditorSubmodes() {
 }
 
 function initNewSubmodeModal() {
-  document.getElementById('nsmCancel').addEventListener('click', closeNewSubmodeModal);
-  document.getElementById('nsubCreate').addEventListener('click', confirmCreateSubmode);
-  document.getElementById('nsubName').addEventListener('keydown', (e) => {
+  document.getElementById('nsubCancel')?.addEventListener('click', closeNewSubmodeModal);
+  document.getElementById('nsubCreate')?.addEventListener('click', confirmCreateSubmode);
+  document.getElementById('nsubName')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmCreateSubmode();
   });
 }
@@ -1057,10 +1057,10 @@ function deleteGroup(groupTitle) {
 // =========================================================
 
 function initNewSetModal() {
-  document.getElementById('nsCancel').addEventListener('click', closeNewSetModal);
-  document.getElementById('nsCreate').addEventListener('click', createNewSet);
+  document.getElementById('nsCancel')?.addEventListener('click', closeNewSetModal);
+  document.getElementById('nsCreate')?.addEventListener('click', createNewSet);
 
-  document.getElementById('nsAppName').addEventListener('input', () => {
+  document.getElementById('nsAppName')?.addEventListener('input', () => {
     nsAutoNameTracking = false;
   });
 }
@@ -1224,10 +1224,10 @@ function createNewSet() {
 // =========================================================
 
 function initCommandFormModal() {
-  document.getElementById('cfCancel').addEventListener('click', closeCommandForm);
-  document.getElementById('cfSave').addEventListener('click', saveCommandForm);
-  document.getElementById('cfDelete').addEventListener('click', deleteCommandForm);
-  document.getElementById('cfTemplate').addEventListener('input', updateTokenHint);
+  document.getElementById('cfCancel')?.addEventListener('click', closeCommandForm);
+  document.getElementById('cfSave')?.addEventListener('click', saveCommandForm);
+  document.getElementById('cfDelete')?.addEventListener('click', deleteCommandForm);
+  document.getElementById('cfTemplate')?.addEventListener('input', updateTokenHint);
 }
 
 function openCommandForm(appKey, submodeKey, groupTitle, index) {
@@ -1514,9 +1514,9 @@ function renderVariablesManager() {
 }
 
 function initVariableFormModal() {
-  document.getElementById('vfCancel').addEventListener('click', closeVariableForm);
-  document.getElementById('vfSave').addEventListener('click', saveVariableForm);
-  document.getElementById('vfDelete').addEventListener('click', deleteVariableForm);
+  document.getElementById('vfCancel')?.addEventListener('click', closeVariableForm);
+  document.getElementById('vfSave')?.addEventListener('click', saveVariableForm);
+  document.getElementById('vfDelete')?.addEventListener('click', deleteVariableForm);
 }
 
 function openNewVariableModal() {
