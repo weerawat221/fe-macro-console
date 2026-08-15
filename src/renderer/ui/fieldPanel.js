@@ -19,29 +19,13 @@ function getActiveVariablesForCurrentMode() {
     (cmdList || []).forEach((cmd) => {
       const tmpl = cmd.template || '';
       (tmpl.match(/\{(.*?)\}/g) || []).forEach((m) => {
-        const raw = m.slice(1, -1).trim();
-        const cleaned = raw.replace(/:blue_full|:blue|:tab/g, '');
-        
-        // Exact match in defined variables
-        const directDef = varDefs.find((v) => v.key === cleaned);
-        if (directDef) {
-          usedKeys.add(directDef.key);
-          if (directDef.formula) {
+        const key = m.slice(1, -1).trim();
+        if (key) {
+          usedKeys.add(key);
+          const directDef = varDefs.find((v) => v.key === key);
+          if (directDef && directDef.formula) {
             const deps = extractReferencedVariables(directDef.formula, directDef.key);
             deps.forEach((d) => usedKeys.add(d));
-          }
-        } else {
-          // Check octet match e.g. lan_ip.1 or math match e.g. lan_ip+1
-          const octMatch = cleaned.match(/^(.*?)\.([1-4])$/);
-          if (octMatch) {
-            usedKeys.add(octMatch[1]);
-          } else {
-            const mathMatch = cleaned.match(/^([a-zA-Z0-9_]+)([+-]\d+)$/);
-            if (mathMatch) {
-              usedKeys.add(mathMatch[1]);
-            } else if (cleaned !== 'lan_mask' && cleaned !== 'mask') {
-              usedKeys.add(cleaned);
-            }
           }
         }
       });
@@ -58,19 +42,12 @@ function getActiveVariablesForCurrentMode() {
     }
   });
 
-  const relevant = varDefs.filter((v) => {
-    if (v.system && v.formula && !usedKeys.has(v.key)) return false;
-    return usedKeys.has(v.key);
-  });
+  const relevant = varDefs.filter((v) => usedKeys.has(v.key));
 
   usedKeys.forEach((key) => {
     if (!relevant.some((v) => v.key === key)) {
       const def = varDefs.find((v) => v.key === key);
-      if (def) {
-        relevant.push(def);
-      } else if (key !== 'lan_mask' && key !== 'mask') {
-        relevant.push({ key, label: key.toUpperCase().replace(/_/g, ' '), description: '' });
-      }
+      relevant.push(def || { key, label: key.toUpperCase().replace(/_/g, ' '), description: '' });
     }
   });
 
@@ -80,8 +57,7 @@ function getActiveVariablesForCurrentMode() {
 function getVisibleVariables() {
   const varDefs = Array.isArray(state.variables) && state.variables.length > 0 ? state.variables : [];
   if (state.showAllFields) {
-    const userVars = varDefs.filter((v) => !(v.system && v.formula && !v.label));
-    if (userVars.length > 0) return userVars;
+    return varDefs;
   }
   return getActiveVariablesForCurrentMode();
 }

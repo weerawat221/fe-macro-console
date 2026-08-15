@@ -26,7 +26,7 @@ const DEFAULT_COMMAND_SETS = {
           ],
           'Access Control': [
             { label: 'Stelnet Access', template: 'stelnet {stelnet_ip}\n', popup: null, autoFocus: true },
-            { label: 'Admin User', template: 'admin\n', popup: null, autoFocus: true },
+            { label: 'Admin User', template: '{admin_user}\n', popup: null, autoFocus: true },
             { label: 'Quit', template: 'quit\n', popup: null, autoFocus: true },
           ],
         },
@@ -54,21 +54,21 @@ const DEFAULT_COMMAND_SETS = {
             {
               label: '[Full] MDES 10M',
               template:
-                'interface gpon-onu_{port}\nname {sr_onu}\ntcont 1 name MDES profile MDES-10M-IN\ngemport 1 name MDES tcont 1\ntraffic-profile MDES-30M-OUT vport 1 direction egress\nservice-port 1 vport 1 user-vlan 10 vlan {vlan}\nexit\n',
+                'interface gpon-onu_{port}\nname {sr_onu}\ntcont {tcont} name MDES profile {profile_in}\ngemport {gemport} name MDES tcont {tcont}\ntraffic-profile {profile_out} vport 1 direction egress\nservice-port 1 vport 1 user-vlan {user_vlan} vlan {vlan}\nexit\n',
               popup: 'full',
               autoFocus: true,
             },
             {
               label: '[Full] UNLIMITED',
               template:
-                'interface gpon-onu_{port}\nname {sr_onu}\ntcont 1 name MDES profile UNLIMITED_UP\ngemport 1 name MDES tcont 1\ngemport 1 traffic-limit downstream UNLIMITED_DOWN\nservice-port 1 vport 1 user-vlan 10 vlan {vlan}\nexit\n',
+                'interface gpon-onu_{port}\nname {sr_onu}\ntcont {tcont} name MDES profile {unlimited_up_profile}\ngemport {gemport} name MDES tcont {tcont}\ngemport {gemport} traffic-limit downstream {unlimited_down_profile}\nservice-port 1 vport 1 user-vlan {user_vlan} vlan {vlan}\nexit\n',
               popup: 'full',
               autoFocus: true,
             },
             {
               label: '[Full] Mng Logic',
               template:
-                'pon-onu-mng gpon-onu_{port}\nservice MDES gemport 1 vlan 10\nsecurity-mgmt 1 state enable mode forward\nsecurity-mgmt 2 state enable mode discard ingress-type wan protocol telnet\nsecurity-mgmt 3 state enable mode discard ingress-type lan protocol telnet\nfirewall enable level low anti-hack disable\nmgmt-ip {ce_ip} 255.255.255.252 vlan 10 priority 0 route 0.0.0.0 0.0.0.0 {pe_ip} host 1\nexit\n',
+                'pon-onu-mng gpon-onu_{port}\nservice MDES gemport {gemport} vlan {user_vlan}\nsecurity-mgmt 1 state enable mode forward\nsecurity-mgmt 2 state enable mode discard ingress-type wan protocol telnet\nsecurity-mgmt 3 state enable mode discard ingress-type lan protocol telnet\nfirewall enable level low anti-hack disable\nmgmt-ip {ce_ip} {mgmt_subnet} vlan {user_vlan} priority {mgmt_priority} route {mgmt_route} {pe_ip} host {mgmt_host}\nexit\n',
               popup: 'full',
               autoFocus: true,
             },
@@ -179,7 +179,7 @@ const DEFAULT_COMMAND_SETS = {
       DEFAULT: {
         name: 'Account',
         groups: {
-          Account: [{ label: 'Login Profile', template: 'admin\nadmin\n', popup: null, autoFocus: true }],
+          Account: [{ label: 'Login Profile', template: '{fcvpn_user}\n{fcvpn_pass}\n', popup: null, autoFocus: true }],
         },
       },
     },
@@ -196,24 +196,24 @@ const DEFAULT_COMMAND_SETS = {
           'LAN Configuration': [
             {
               label: 'Blue Config (ProComm)',
-              template: '{lan_ip:blue_full}',
+              template: '{lan_ip}\t{subnetmask29}\t{lan_ip_1}\t{lan_ip_2}\t{lan_ip}',
               popup: null,
               autoFocus: true,
             },
             {
               label: 'Green Config (One-shot)',
-              template: '{lan_ip}\t{lan_mask}\t\t{lan_ip+1}\t{lan_ip+2}\t\t{lan_ip}\t\t\t{lan_ip}',
+              template: '{lan_ip}\t{subnetmask29}\t\t{lan_ip_1}\t{lan_ip_2}\t\t{lan_ip}\t\t\t{lan_ip}',
               popup: null,
               autoFocus: true,
             },
           ],
           'Login [No Captcha]': [
-            { label: 'TOT', template: 'tot\ttot\n', popup: null, autoFocus: true },
-            { label: 'Admin', template: 'admin\tadmin\n', popup: null, autoFocus: true },
+            { label: 'TOT', template: '{tot_user}\t{tot_pass}\n', popup: null, autoFocus: true },
+            { label: 'Admin', template: '{admin_user}\t{admin_pass}\n', popup: null, autoFocus: true },
           ],
           'Login [Have Captcha]': [
-            { label: '[Captcha] TOT', template: 'tot\ttot\t{captcha}\n', popup: null, autoFocus: true },
-            { label: '[Captcha] Admin', template: 'admin\tadmin\t{captcha}\n', popup: null, autoFocus: true },
+            { label: '[Captcha] TOT', template: '{tot_user}\t{tot_pass}\t{captcha}\n', popup: null, autoFocus: true },
+            { label: '[Captcha] Admin', template: '{admin_user}\t{admin_pass}\t{captcha}\n', popup: null, autoFocus: true },
           ],
         },
       },
@@ -226,16 +226,34 @@ const DEFAULT_VARIABLES = [
   { key: 'group_id', label: 'Group ID (AP)', description: 'AP Group Identifier', dataType: 'String' },
   { key: 'group_name', label: 'Group Name', description: 'AP Group Name', dataType: 'String' },
   { key: 'stelnet_ip', label: 'Stelnet IP', description: 'Stelnet Management IP', dataType: 'IP' },
-  { key: 'port', label: 'Port (OLT)', description: 'OLT Port in slot/card/port:onu_idx format (e.g. 1/1/1:5)', dataType: 'Port' },
-  { key: 'olt', label: 'OLT Port', description: 'OLT base port (e.g. 1/1/1)', formula: '{\n  olt = port.split(":", 0)\n}', dataType: 'Port', system: true },
-  { key: 'onu_idx', label: 'ONU Index', description: 'ONU Index (e.g. 5)', formula: '{\n  onu_idx = port.split(":", 1)\n}', dataType: 'Number', system: true },
+  { key: 'port', label: 'Port (OLT)', description: 'slot/card/port:onu_idx format (e.g. 1/1/1:5)', dataType: 'Port' },
+  { key: 'olt', label: 'OLT Port', description: 'OLT base port (e.g. 1/1/1)', formula: '{\n  olt = port.split(":", 0)\n}', dataType: 'Port' },
+  { key: 'onu_idx', label: 'ONU Index', description: 'ONU Index (e.g. 5)', formula: '{\n  onu_idx = port.split(":", 1)\n}', dataType: 'Number' },
   { key: 'sr_onu', label: 'SR (ONU)', description: 'Service Request for ONU', dataType: 'String' },
   { key: 'vlan', label: 'VLAN', description: 'VLAN Identifier (e.g. 120)', dataType: 'Number' },
+  { key: 'user_vlan', label: 'User VLAN', description: 'User VLAN for Service Port', default_value: '10', dataType: 'Number' },
   { key: 'ce_ip', label: 'CE IP', description: 'Customer Edge IP', dataType: 'IP' },
   { key: 'pe_ip', label: 'PE IP', description: 'Provider Edge IP', dataType: 'IP' },
   { key: 'lan_ip', label: 'LAN IP', description: 'LAN Network Base IP (e.g. 192.168.1.0)', dataType: 'IP' },
-  { key: 'lan_mask', label: 'LAN Mask', description: 'Subnet Mask for LAN network', default_value: '255.255.255.248', dataType: 'IP', system: true },
-  { key: 'mask', label: 'Mask (Alias)', description: 'Alias for LAN Mask', default_value: '255.255.255.248', dataType: 'IP', system: true },
+  { key: 'lan_ip_1', label: 'LAN IP 1', description: 'First Usable IP (Host 1)', formula: '{\n  array[] = lan_ip.split(".")\n  array[3] = toint(array[3]) + 1\n  lan_ip_1 = array[0] + "." + array[1] + "." + array[2] + "." + tostring(array[3])\n}', dataType: 'IP' },
+  { key: 'lan_ip_2', label: 'LAN IP 2', description: 'Second Usable IP (Host 2)', formula: '{\n  array[] = lan_ip.split(".")\n  array[3] = toint(array[3]) + 2\n  lan_ip_2 = array[0] + "." + array[1] + "." + array[2] + "." + tostring(array[3])\n}', dataType: 'IP' },
+  { key: 'subnetmask29', label: 'Subnet Mask (/29)', description: 'LAN Subnet Mask /29', default_value: '255.255.255.248', dataType: 'IP' },
+  { key: 'mgmt_subnet', label: 'Mgmt Subnet (/30)', description: 'Management Subnet Mask /30', default_value: '255.255.255.252', dataType: 'IP' },
+  { key: 'mgmt_route', label: 'Mgmt Route', description: 'Default Route Prefix & Mask', default_value: '0.0.0.0 0.0.0.0', dataType: 'String' },
+  { key: 'mgmt_priority', label: 'Mgmt Priority', description: 'Management VLAN Priority', default_value: '0', dataType: 'Number' },
+  { key: 'mgmt_host', label: 'Mgmt Host', description: 'Management Host Index', default_value: '1', dataType: 'Number' },
+  { key: 'tcont', label: 'TCONT ID', description: 'TCONT Identifier', default_value: '1', dataType: 'Number' },
+  { key: 'gemport', label: 'Gemport ID', description: 'Gemport Identifier', default_value: '1', dataType: 'Number' },
+  { key: 'profile_in', label: 'Profile IN (MDES)', description: 'Traffic Profile Inbound', default_value: 'MDES-10M-IN', dataType: 'String' },
+  { key: 'profile_out', label: 'Profile OUT (MDES)', description: 'Traffic Profile Outbound', default_value: 'MDES-30M-OUT', dataType: 'String' },
+  { key: 'unlimited_up_profile', label: 'Profile UP (Unlimited)', description: 'Unlimited Up Profile Name', default_value: 'UNLIMITED_UP', dataType: 'String' },
+  { key: 'unlimited_down_profile', label: 'Limit DOWN (Unlimited)', description: 'Unlimited Down Traffic Limit', default_value: 'UNLIMITED_DOWN', dataType: 'String' },
+  { key: 'admin_user', label: 'Admin User', description: 'Admin Username', default_value: 'admin', dataType: 'String' },
+  { key: 'admin_pass', label: 'Admin Password', description: 'Admin Password', default_value: 'admin', dataType: 'String', hidden: true, locked: true },
+  { key: 'tot_user', label: 'TOT User', description: 'TOT Username', default_value: 'tot', dataType: 'String' },
+  { key: 'tot_pass', label: 'TOT Password', description: 'TOT Password', default_value: 'tot', dataType: 'String', hidden: true, locked: true },
+  { key: 'fcvpn_user', label: 'FortiClient User', description: 'FortiClient VPN Username', default_value: 'admin', dataType: 'String' },
+  { key: 'fcvpn_pass', label: 'FortiClient Password', description: 'FortiClient VPN Password', default_value: 'admin', dataType: 'String', hidden: true, locked: true },
   { key: 'captcha', label: 'Captcha', description: 'Login Captcha Code', dataType: 'String' },
 ];
 
@@ -245,35 +263,23 @@ function normalizeVariables(stored) {
   const keyMap = new Map();
   stored.forEach((v) => {
     if (v && v.key) {
-      let formula = v.formula || null;
-      // Convert legacy prototype formulas if present
-      if (formula === 'port.split(":")[0]') formula = '{\n  olt = port.split(":", 0)\n}';
-      if (formula === 'port.split(":")[1]') formula = '{\n  onu_idx = port.split(":", 1)\n}';
-
       keyMap.set(v.key, {
         key: v.key,
         label: v.label || v.key,
         description: v.description || '',
         locked: !!v.locked,
         hidden: !!v.hidden,
-        formula: formula,
+        formula: v.formula || null,
         dataType: v.dataType || 'String',
         default_value: v.default_value !== undefined ? v.default_value : null,
-        system: !!v.system,
       });
     }
   });
 
-  // Ensure default system variables are present
+  // Ensure any missing default variables are appended
   DEFAULT_VARIABLES.forEach((def) => {
     if (!keyMap.has(def.key)) {
-      keyMap.set(def.key, def);
-    } else {
-      const existing = keyMap.get(def.key);
-      if (def.formula && !existing.formula) existing.formula = def.formula;
-      if (def.default_value && !existing.default_value) existing.default_value = def.default_value;
-      if (def.dataType && !existing.dataType) existing.dataType = def.dataType;
-      if (def.system) existing.system = true;
+      keyMap.set(def.key, { ...def });
     }
   });
 
