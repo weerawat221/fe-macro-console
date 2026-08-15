@@ -32,6 +32,11 @@ async function bootstrap() {
   const storedVars = await window.feMacro.storeGet('variables', null);
   const normalizedVars = normalizeVariables(storedVars || DEFAULT_VARIABLES);
 
+  if (window.feMacro?.storeSet) {
+    window.feMacro.storeSet('variables', normalizedVars);
+    window.feMacro.storeSet('commandSets', normalizedSets);
+  }
+
   const showAllFields = await window.feMacro.storeGet('showAllFields', false);
 
   const firstAppKey = Object.keys(normalizedSets)[0] || 'RDM';

@@ -22,6 +22,12 @@ import {
   detectCircularDependency,
   extractReferencedVariables,
 } from '../shared/formulaEngine.js';
+import {
+  DEFAULT_COMMAND_SETS,
+  DEFAULT_VARIABLES,
+  normalizeCommandSets,
+  normalizeVariables,
+} from '../shared/defaultCommandsClient.js';
 
 let commandSets = {};
 let variables = [];
@@ -66,8 +72,16 @@ function showToast(msg, duration = 3000) {
 // Initial bootstrap
 window.addEventListener('DOMContentLoaded', async () => {
   viewConfig = await loadAndApplyViewConfig();
-  commandSets = await window.feMacro.storeGet('commandSets', {});
-  variables = await window.feMacro.storeGet('variables', []);
+  const storedSets = await window.feMacro.storeGet('commandSets', null);
+  const storedVars = await window.feMacro.storeGet('variables', null);
+  commandSets = normalizeCommandSets(storedSets || DEFAULT_COMMAND_SETS);
+  variables = normalizeVariables(storedVars || DEFAULT_VARIABLES);
+
+  // Sync normalized lists back to store so both windows stay in sync
+  if (window.feMacro?.storeSet) {
+    window.feMacro.storeSet('variables', variables);
+    window.feMacro.storeSet('commandSets', commandSets);
+  }
 
   // Load admin password setup status
   const adminHash = await window.feMacro.storeGet('adminPwHash', null);
