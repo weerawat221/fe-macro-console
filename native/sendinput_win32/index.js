@@ -1,12 +1,18 @@
-// index.js
-// Native Win32 automation bridge communicating with Win32Bridge.exe.
+function resolveExePath() {
+  const candidates = [
+    path.join(__dirname, '..', 'Win32Bridge.exe'),
+    path.join(process.resourcesPath || '', 'native', 'Win32Bridge.exe'),
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'native', 'Win32Bridge.exe'),
+    path.join(process.resourcesPath || '', 'Win32Bridge.exe'),
+  ];
+  for (const c of candidates) {
+    if (c && fs.existsSync(c)) return c;
+  }
+  return path.join(__dirname, '..', 'Win32Bridge.exe');
+}
 
-const path = require('path');
-const fs = require('fs');
-const { spawn } = require('child_process');
-
-const exePath = path.join(__dirname, '..', 'Win32Bridge.exe');
-const isSupported = process.platform === 'win32' && fs.existsSync(exePath);
+const exePath = resolveExePath();
+const isSupported = process.platform === 'win32';
 
 let bridgeProcess = null;
 let queue = [];
