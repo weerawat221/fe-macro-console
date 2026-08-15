@@ -1,21 +1,43 @@
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { spawn } = require('child_process');
 
 function resolveExePath() {
   const candidates = [
+    // 1. Direct relative path (dev mode)
     path.join(__dirname, '..', 'Win32Bridge.exe'),
-    path.join(process.resourcesPath || '', 'native', 'Win32Bridge.exe'),
-    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'native', 'Win32Bridge.exe'),
-    path.join(process.resourcesPath || '', 'Win32Bridge.exe'),
-  ];
+    // 2. asar unpacked path (packaged mode)
+    path.join(__dirname.replace('app.asar', 'app.asar.unpacked'), '..', 'Win32Bridge.exe'),
+    path.join(__dirname.replace('app.asar', 'app.asar.unpacked'), 'Win32Bridge.exe'),
+    // 3. resourcesPath candidates (NSIS & Portable)
+    process.resourcesPath ? path.join(process.resourcesPath, 'native', 'Win32Bridge.exe') : null,
+    process.resourcesPath ? path.join(process.resourcesPath, 'app.asar.unpacked', 'native', 'Win32Bridge.exe') : null,
+    process.resourcesPath ? path.join(process.resourcesPath, 'Win32Bridge.exe') : null,
+  ].filter(Boolean);
+
   for (const c of candidates) {
-    if (c && fs.existsSync(c)) return c;
+    if (fs.existsSync(c)) return c;
   }
+
+  // 4. Fallback: If inside asar in a portable sandbox, extract to os.tmpdir() so spawn() always succeeds
+  try {
+    const tempExe = path.join(os.tmpdir(), 'FE_Macro_Win32Bridge_v13.exe');
+    if (fs.existsSync(tempExe)) return tempExe;
+
+    const sourceAsarPath = path.join(__dirname, '..', 'Win32Bridge.exe');
+    if (fs.existsSync(sourceAsarPath)) {
+      const buf = fs.readFileSync(sourceAsarPath);
+      fs.writeFileSync(tempExe, buf);
+      return tempExe;
+    }
+  } catch (e) {
+    // ignore
+  }
+
   return path.join(__dirname, '..', 'Win32Bridge.exe');
 }
 
-const exePath = resolveExePath();
 const isSupported = process.platform === 'win32';
 
 let bridgeProcess = null;
@@ -25,8 +47,11 @@ let buffer = '';
 function startBridge() {
   if (!isSupported) return;
 
+  const activeExe = resolveExePath();
+  if (!activeExe || !fs.existsSync(activeExe)) return;
+
   try {
-    bridgeProcess = spawn(exePath, [], {
+    bridgeProcess = spawn(activeExe, [], {
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
     });
