@@ -2,6 +2,9 @@
 // Precise DPI-aware OCR word highlight, lasso drag selection,
 // editable popover, and multi-variable assignment.
 
+import { preprocessCropCanvas } from './ocrPreprocessor.js';
+import { repairIpv4, parsePortOlt } from '../shared/networkConfigOcr.js';
+
 let screenshotImg = null;
 let canvasWidth = 0;
 let canvasHeight = 0;
@@ -413,11 +416,15 @@ function cleanValuable(varKey, rawText) {
     return num ? num[0] : val;
   }
 
+  // If Port / OLT variable: parse with Port/OLT pattern
+  if (k.includes('port') || k.includes('olt')) {
+    const p = parsePortOlt(val);
+    if (p.valid) return p.raw;
+  }
+
   // If IP variable: strip CIDR mask, repair dropped dots, and strip prefixes
   if (k.includes('ip') || k.includes('stelnet') || k.includes('lan') || k.includes('ce') || k.includes('pe')) {
-    val = val.replace(/\/\d{1,2}$/, '');
-    val = val.replace(/^(PE|CE|Lan|LAN|PORT|SW|OLT|AP|ONU)\s*:\s*/i, '');
-    val = repairIpAddress(val);
+    val = repairIpv4(val);
     return val;
   }
 
@@ -425,38 +432,26 @@ function cleanValuable(varKey, rawText) {
 }
 
 // =========================================================
-// RUN OCR WITH PRECISE RESOLUTION CROPPING
+// RUN OCR WITH PRECISE RESOLUTION CROPPING & PREPROCESSING
 // =========================================================
 
 async function processCropRegion(box, recallAssignments = null) {
   phase = 'ocr_processing';
   if (selectionBox) selectionBox.style.display = 'none';
   if (ocrLoading) ocrLoading.style.display = 'flex';
-  statusText.textContent = 'Processing OCR (English & Numbers)…';
+  statusText.textContent = 'Processing OCR (English & Thai)…';
 
   const srcX = Math.round(box.x * imgScaleX);
   const srcY = Math.round(box.y * imgScaleY);
   const srcW = Math.round(box.width * imgScaleX);
   const srcH = Math.round(box.height * imgScaleY);
 
-  const offscreen = document.createElement('canvas');
-  offscreen.width = srcW;
-  offscreen.height = srcH;
-  const offCtx = offscreen.getContext('2d');
-  offCtx.imageSmoothingEnabled = true;
-  offCtx.imageSmoothingQuality = 'high';
-  offCtx.filter = 'contrast(1.25) brightness(0.98)';
-
-  offCtx.drawImage(
-    screenshotImg,
-    srcX, srcY, srcW, srcH,
-    0, 0, srcW, srcH
-  );
-
-  const croppedDataUrl = offscreen.toDataURL('image/png');
+  // Preprocess cropped canvas: upscale if < 2000px, grayscale, auto dark-invert, contrast stretch
+  const preprocessed = preprocessCropCanvas(screenshotImg, srcX, srcY, srcW, srcH, { minWidth: 2000 });
 
   const res = await window.feMacro.ocrRecognize({
-    imageBase64: croppedDataUrl,
+    imageBase64: preprocessed.dataUrl,
+    scale: preprocessed.scale,
   });
 
   if (ocrLoading) ocrLoading.style.display = 'none';
@@ -472,12 +467,12 @@ async function processCropRegion(box, recallAssignments = null) {
 
   // Auto-repair any words that might have missed dots
   words.forEach((w) => {
-    w.text = repairIpAddress(w.text);
+    w.text = repairIpv4(w.text);
   });
 
   ocrResult = res;
   phase = 'assign_text';
-  statusText.textContent = `Detected ${words.length} words. Drag across words to highlight (คลุมดำ), then pick a Valuable!`;
+  statusText.textContent = `Detected ${words.length} words. Drag across words to highlight (คลุมดำ), then pick a Variable!`;
   if (bottomBar) bottomBar.style.display = 'flex';
 
   renderOcrWords();

@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
+    "test": "node --test test/networkConfigOcr.test.js",
     "start": "electron .",
     "dev": "electron . --dev",
     "build": "electron-builder --win --x64",

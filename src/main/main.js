@@ -12,6 +12,7 @@ const Tesseract = require('tesseract.js');
 const win32 = require('../../native/sendinput_win32');
 const store = require('./store');
 const { DEFAULT_COMMAND_SETS, normalizeCommandSets } = require('../shared/defaultCommands');
+const { processOcrText, repairIpv4 } = require('../shared/networkConfigOcr');
 
 const isDev = process.argv.includes('--dev');
 
@@ -521,8 +522,9 @@ let ocrWorker = null;
 
 async function getOcrWorker() {
   if (!ocrWorker) {
-    ocrWorker = await Tesseract.createWorker('eng');
+    ocrWorker = await Tesseract.createWorker(['eng', 'tha']);
     await ocrWorker.setParameters({
+      tessedit_pageseg_mode: '6',
       preserve_interword_spaces: '1',
     });
   }
@@ -628,27 +630,8 @@ function normalizeOcrText(str) {
     .replace(/(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*\/\s*(\d{1,2}\b)/g, '$1/$2')
     .trim();
 
-  // Repair dropped dots in IPv4 addresses (e.g. 17229.255.14 -> 172.29.255.14, 192168.1.1 -> 192.168.1.1)
-  res = res.replace(/\b(\d{4,6})\.(\d{1,3})\.(\d{1,3})\b/g, (match, head, p2, p3) => {
-    const knownPrefixes = ['172', '192', '100', '169', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32'];
-    for (const prefix of knownPrefixes) {
-      if (head.startsWith(prefix) && head.length > prefix.length) {
-        const rest = head.slice(prefix.length);
-        if (parseInt(rest, 10) <= 255) {
-          return prefix + '.' + rest + '.' + p2 + '.' + p3;
-        }
-      }
-    }
-    if (head.length >= 4) {
-      const p1 = head.slice(0, 3);
-      const rest = head.slice(3);
-      if (parseInt(p1, 10) <= 255 && parseInt(rest, 10) <= 255) {
-        return p1 + '.' + rest + '.' + p2 + '.' + p3;
-      }
-    }
-    return match;
-  });
-
+  // Robust IPv4 repair
+  res = repairIpv4(res);
   return res;
 }
 
@@ -717,7 +700,6 @@ ipcMain.handle('ocr:recognize', async (_evt, { imageBase64, scale = 1 }) => {
     const sortedLines = [...lines].sort((a, b) => a.bbox.y0 - b.bbox.y0);
 
     sortedLines.forEach((line) => {
-      // Check if this line belongs to an existing card nearby
       let matchedCard = null;
       for (const card of cards) {
         const xOverlap = Math.max(0, Math.min(card.bbox.x1, line.bbox.x1) - Math.max(card.bbox.x0, line.bbox.x0));
@@ -745,12 +727,19 @@ ipcMain.handle('ocr:recognize', async (_evt, { imageBase64, scale = 1 }) => {
       }
     });
 
+    const structured = processOcrText(data.text || '', words);
+
     return {
       ok: true,
-      text: normalizeOcrText(data.text || ''),
+      text: structured.rawText,
       words,
       lines,
       cards,
+      ips: structured.ips,
+      ports: structured.ports,
+      labeledPairs: structured.labeledPairs,
+      autoAssignments: structured.autoAssignments,
+      lowConfidenceWords: structured.lowConfidenceWords,
     };
   } catch (err) {
     return { ok: false, error: err.message };
