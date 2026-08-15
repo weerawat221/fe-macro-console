@@ -141,10 +141,24 @@ function resolveToken(token, data) {
   throw new Error(`MISSING_TOKEN:${t}`);
 }
 
+/**
+ * Unescapes literal string sequences like \t, \n, \r into actual control characters.
+ * @param {string} str
+ * @returns {string}
+ */
+export function unescapeMacroString(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\r/g, '\r');
+}
+
 function formatTemplate(template, data) {
-  return template.replace(/\{(.*?)\}/g, (_match, token) => {
+  const resolved = template.replace(/\{(.*?)\}/g, (_match, token) => {
     return resolveToken(token, data);
   });
+  return unescapeMacroString(resolved);
 }
 
 export async function runCommand(template, popupType, label, autoFocus = true, appKey = null) {

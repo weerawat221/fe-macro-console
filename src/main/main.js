@@ -348,10 +348,14 @@ ipcMain.handle('macro:send', async (_evt, text, appKey) => {
     return { ok: false, reason: 'Win32 native automation unavailable' };
   }
 
+  const normalizedText = typeof text === 'string'
+    ? text.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r')
+    : text;
+
   const targetKey = appKey || lastDetectedMode;
   const queries = getQueriesForApp(targetKey);
 
-  const res = await win32.focusAndSend(currentTargetHwnd, text, queries);
+  const res = await win32.focusAndSend(currentTargetHwnd, normalizedText, queries);
   if (res && res.ok) {
     if (res.hwnd) currentTargetHwnd = res.hwnd;
     lastDetectedMode = targetKey;

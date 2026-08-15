@@ -203,58 +203,87 @@ namespace Win32Bridge {
             }
         }
 
+        [DllImport("user32.dll")]
+        static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
         static void SendStringAtomic(string text) {
             if (string.IsNullOrEmpty(text)) return;
 
             // Split into text segments if there are Enter or Tab characters
-            // So text is sent in one atomic batch, then Enter is sent
+            // Text is sent in atomic Unicode batches, and Enter/Tab are sent as VK events
             List<INPUT> batch = new List<INPUT>();
 
             for (int i = 0; i < text.Length; i++) {
                 char c = text[i];
+
+                // Handle literal backslash escape sequences (\n, \t, \r, \\)
+                if (c == '\\' && i + 1 < text.Length) {
+                    char next = text[i + 1];
+                    if (next == 'n' || next == 'N') {
+                        i++;
+                        c = '\n';
+                    }
+                    else if (next == 't' || next == 'T') {
+                        i++;
+                        c = '\t';
+                    }
+                    else if (next == 'r' || next == 'R') {
+                        i++;
+                        continue;
+                    }
+                    else if (next == '\\') {
+                        i++;
+                        c = '\\';
+                    }
+                }
+
                 if (c == '\r') continue;
 
                 if (c == '\n') {
-                    // Flush existing batch
+                    // Flush existing Unicode batch
                     if (batch.Count > 0) {
                         SendInput((uint)batch.Count, batch.ToArray(), InputSize);
                         batch.Clear();
-                        Thread.Sleep(35); // Commit delay for IME/Unicode in chat apps
+                        Thread.Sleep(30);
                     }
 
-                    // Send Enter
+                    // Send Enter (VK_RETURN)
                     INPUT[] enter = new INPUT[2];
                     enter[0].type = INPUT_KEYBOARD;
                     enter[0].ki.wVk = VK_RETURN;
+                    enter[0].ki.wScan = (ushort)MapVirtualKey(VK_RETURN, 0);
                     enter[0].ki.dwFlags = 0;
 
                     enter[1].type = INPUT_KEYBOARD;
                     enter[1].ki.wVk = VK_RETURN;
+                    enter[1].ki.wScan = (ushort)MapVirtualKey(VK_RETURN, 0);
                     enter[1].ki.dwFlags = KEYEVENTF_KEYUP;
 
                     SendInput(2, enter, InputSize);
-                    Thread.Sleep(20);
+                    Thread.Sleep(35);
                 }
                 else if (c == '\t') {
-                    // Flush existing batch
+                    // Flush existing Unicode batch
                     if (batch.Count > 0) {
                         SendInput((uint)batch.Count, batch.ToArray(), InputSize);
                         batch.Clear();
                         Thread.Sleep(20);
                     }
 
-                    // Send Tab
+                    // Send Tab (VK_TAB)
                     INPUT[] tab = new INPUT[2];
                     tab[0].type = INPUT_KEYBOARD;
                     tab[0].ki.wVk = VK_TAB;
+                    tab[0].ki.wScan = (ushort)MapVirtualKey(VK_TAB, 0);
                     tab[0].ki.dwFlags = 0;
 
                     tab[1].type = INPUT_KEYBOARD;
                     tab[1].ki.wVk = VK_TAB;
+                    tab[1].ki.wScan = (ushort)MapVirtualKey(VK_TAB, 0);
                     tab[1].ki.dwFlags = KEYEVENTF_KEYUP;
 
                     SendInput(2, tab, InputSize);
-                    Thread.Sleep(20);
+                    Thread.Sleep(25);
                 }
                 else {
                     // Unicode char
