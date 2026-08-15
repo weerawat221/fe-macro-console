@@ -2277,3 +2277,30 @@ select {
   font-size: 10.5px;
   font-weight: 600;
 }
+
+/* ============ FONTAWESOME CLASSIC ICONS ============ */
+.fa-arrow-up-to-line,
+.fa-solid.fa-arrow-up-to-line,
+.fas.fa-arrow-up-to-line {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 384 512'%3E%3Cpath fill='black' d='M214.6 153.4c-12.5-12.5-32.8-12.5-45.3 0l-128 128c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 253.3V448c0 17.7 14.3 32 32 32s32-14.3 32-32V253.3l73.4 73.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-128-128zM352 64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32C14.3 0 0 14.3 0 32s14.3 32 32 32h320z'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 384 512'%3E%3Cpath fill='black' d='M214.6 153.4c-12.5-12.5-32.8-12.5-45.3 0l-128 128c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 253.3V448c0 17.7 14.3 32 32 32s32-14.3 32-32V253.3l73.4 73.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-128-128zM352 64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32C14.3 0 0 14.3 0 32s14.3 32 32 32h320z'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+
+.fa-arrow-down-to-line,
+.fa-regular.fa-arrow-down-to-line,
+.far.fa-arrow-down-to-line,
+.fa-solid.fa-arrow-down-to-line,
+.fas.fa-arrow-down-to-line {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 384 512'%3E%3Cpath fill='black' d='M169.4 358.6c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 258.7V64c0-17.7-14.3-32-32-32s-32 14.3-32 32v194.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128zM32 448c-17.7 0-32 14.3-32 32s14.3 32 32 32h320c17.7 0 32-14.3 32-32s-14.3-32-32-32H32z'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 384 512'%3E%3Cpath fill='black' d='M169.4 358.6c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 258.7V64c0-17.7-14.3-32-32-32s-32 14.3-32 32v194.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128zM32 448c-17.7 0-32 14.3-32 32s14.3 32 32 32h320c17.7 0 32-14.3 32-32s-14.3-32-32-32H32z'/%3E%3C/svg%3E") no-repeat center / contain;
+}
