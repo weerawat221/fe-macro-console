@@ -1,4 +1,4 @@
-﻿// networkConfigOcr.js
+// networkConfigOcr.js
 // Specialized Network Configuration Parser & Validator for OCR Pipelines.
 // Handles IPv4 validation, dropped-dot repair, Port/OLT pattern parsing,
 // and Thai/English label-value pair extraction.
@@ -412,6 +412,84 @@ function processOcrText(rawText, words = []) {
   };
 }
 
+/**
+ * Cleans and extracts the relevant portion of an OCR string based on the variable's dataType and key.
+ * @param {string} rawText
+ * @param {string} [dataType='String'] - 'IP' | 'Port' | 'Number' | 'String'
+ * @param {string} [varKey=''] - optional variable key for extra heuristic hints (e.g. 'vlan', 'lan_ip')
+ * @returns {string}
+ */
+function cleanOcrValueByDataType(rawText, dataType = 'String', varKey = '') {
+  if (rawText === undefined || rawText === null) return '';
+  let str = String(rawText).trim();
+  if (!str) return '';
+
+  const dt = (dataType || 'String').toLowerCase();
+  const k = (varKey || '').toLowerCase();
+
+  // 1. DATA TYPE: NUMBER (or variable key matches number/vlan/onu heuristics)
+  if (dt === 'number' || k.includes('vlan') || k.includes('onu_idx') || k.includes('idx') || k.includes('count') || k.includes('num')) {
+    // Remove thousand separators (e.g. "24,700" -> "24700")
+    const withoutCommas = str.replace(/,/g, '');
+    // Extract first integer or floating number
+    const numMatch = withoutCommas.match(/-?\d+(?:\.\d+)?/);
+    if (numMatch) {
+      return numMatch[0];
+    }
+    return str;
+  }
+
+  // 2. DATA TYPE: PORT (or variable key matches port/olt heuristics)
+  if (dt === 'port' || k.includes('port') || k.includes('olt') || k.includes('interface') || k.includes('slot')) {
+    // Strip leading label prefix like "PORT: ", "OLT: ", "INTERFACE: "
+    let stripped = str.replace(/^(?:PORT|OLT|INTERFACE|INT|SLOT|PON)\s*[:=\-–]?\s*/i, '');
+    const p = parsePortOlt(stripped);
+    if (p.valid) {
+      return p.raw;
+    }
+    const pOrig = parsePortOlt(str);
+    if (pOrig.valid) {
+      return pOrig.raw;
+    }
+    return stripped || str;
+  }
+
+  // 3. DATA TYPE: IP (or variable key matches IP heuristics)
+  if (dt === 'ip' || (!k.includes('vlan') && (k.includes('ip') || k.startsWith('pe') || k.startsWith('ce') || k.startsWith('lan') || k.includes('stelnet')))) {
+    // Check if string contains a standard IPv4 address (possibly surrounded by garbage e.g. "6 : 192.168.1.1", "PE IP: 10.0.0.1/24", "Lan: 172.17.166.89/29")
+    const ipMatch = str.match(/(?:^|[^\d.])(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?:\/\d{1,2})?(?:[^\d.]|$)/);
+    if (ipMatch && isValidIpv4(ipMatch[1])) {
+      return ipMatch[1];
+    }
+
+    // Try stripping leading label prefix and running repairIpv4
+    let stripped = str.replace(/^[^\d\n]*\d{0,3}\s*[:=\-–]\s*/i, '');
+    let repaired = repairIpv4(stripped);
+    if (isValidIpv4(repaired)) {
+      return repaired;
+    }
+
+    // Fallback: try repairIpv4 on the original string
+    repaired = repairIpv4(str);
+    if (isValidIpv4(repaired)) {
+      return repaired;
+    }
+
+    // Fallback 2: try extractIps
+    const ips = extractIps(str);
+    if (ips.length > 0) {
+      return ips[0];
+    }
+
+    return repaired || str;
+  }
+
+  // 4. DATA TYPE: STRING (Default)
+  // Strip standard "Label: " prefix if present (e.g. "SR NO : SR701234" -> "SR701234")
+  let cleanStr = str.replace(/^[A-Za-z\u0E00-\u0E7F\s()_]+[:=\-–]\s*/i, '').trim();
+  return cleanStr || str;
+}
+
 export {
   isValidIpv4,
   repairIpv4,
@@ -419,6 +497,7 @@ export {
   parsePortOlt,
   extractPorts,
   extractLabeledPairs,
+  cleanOcrValueByDataType,
   processOcrText,
 };
 
@@ -430,6 +509,8 @@ if (typeof module !== 'undefined' && module.exports) {
     parsePortOlt,
     extractPorts,
     extractLabeledPairs,
+    cleanOcrValueByDataType,
     processOcrText,
   };
 }
+

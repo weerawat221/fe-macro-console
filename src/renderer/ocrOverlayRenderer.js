@@ -3,7 +3,7 @@
 // editable popover, and multi-variable assignment.
 
 import { preprocessCropCanvas } from './ocrPreprocessor.js';
-import { repairIpv4, parsePortOlt } from '../shared/networkConfigOcr.js';
+import { repairIpv4, parsePortOlt, cleanOcrValueByDataType } from '../shared/networkConfigOcr.js';
 
 let screenshotImg = null;
 let canvasWidth = 0;
@@ -407,28 +407,9 @@ function repairIpAddress(raw) {
 }
 
 function cleanValuable(varKey, rawText) {
-  let val = (rawText || '').trim();
-  const k = (varKey || '').toLowerCase();
-
-  // If VLAN variable: extract only digits
-  if (k.includes('vlan')) {
-    const num = val.match(/\d+/);
-    return num ? num[0] : val;
-  }
-
-  // If Port / OLT variable: parse with Port/OLT pattern
-  if (k.includes('port') || k.includes('olt')) {
-    const p = parsePortOlt(val);
-    if (p.valid) return p.raw;
-  }
-
-  // If IP variable: strip CIDR mask, repair dropped dots, and strip prefixes
-  if (k.includes('ip') || k.includes('stelnet') || k.includes('lan') || k.includes('ce') || k.includes('pe')) {
-    val = repairIpv4(val);
-    return val;
-  }
-
-  return val;
+  const v = availableVariables.find((item) => item.key === varKey);
+  const dataType = v?.dataType || 'String';
+  return cleanOcrValueByDataType(rawText, dataType, varKey);
 }
 
 // =========================================================

@@ -1,4 +1,4 @@
-﻿const test = require('node:test');
+const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   isValidIpv4,
@@ -7,6 +7,7 @@ const {
   parsePortOlt,
   extractPorts,
   extractLabeledPairs,
+  cleanOcrValueByDataType,
   processOcrText,
 } = require('../src/shared/networkConfigOcr');
 
@@ -168,3 +169,31 @@ test('Full OCR Post-Processing Pipeline - processOcrText', () => {
   assert.equal(result.lowConfidenceWords.length, 1);
   assert.equal(result.lowConfidenceWords[0].text, '17230.143210');
 });
+
+test('Data-Type Aware OCR Cleaning - cleanOcrValueByDataType', () => {
+  // IP Data Type
+  assert.equal(cleanOcrValueByDataType('6 : 192.168.1.1', 'IP', 'pe_ip'), '192.168.1.1');
+  assert.equal(cleanOcrValueByDataType('PE IP: 172.31.211.45', 'IP', 'pe_ip'), '172.31.211.45');
+  assert.equal(cleanOcrValueByDataType('CE : 172.31.211.46/29', 'IP', 'ce_ip'), '172.31.211.46');
+  assert.equal(cleanOcrValueByDataType('Lan: 172.17.166.89/29', 'IP', 'lan_ip'), '172.17.166.89');
+  assert.equal(cleanOcrValueByDataType('172.17.166.90/29', 'IP', 'lan_ip_1'), '172.17.166.90');
+  assert.equal(cleanOcrValueByDataType('17230.143210', 'IP', 'ce_ip'), '172.30.143.210');
+
+  // Number Data Type
+  assert.equal(cleanOcrValueByDataType('vlan204', 'Number', 'vlan'), '204');
+  assert.equal(cleanOcrValueByDataType('Vlan214', 'Number', 'user_vlan'), '214');
+  assert.equal(cleanOcrValueByDataType('VLAN : 204', 'Number', 'vlan'), '204');
+  assert.equal(cleanOcrValueByDataType('ONU: 5', 'Number', 'onu_idx'), '5');
+  assert.equal(cleanOcrValueByDataType('24,700', 'Number', 'count'), '24700');
+  assert.equal(cleanOcrValueByDataType('Total: 67', 'Number', 'number_var'), '67');
+
+  // Port Data Type
+  assert.equal(cleanOcrValueByDataType('Port: 1/1/1:5', 'Port', 'port'), '1/1/1:5');
+  assert.equal(cleanOcrValueByDataType('OLT: 1/1/1:1', 'Port', 'olt'), '1/1/1:1');
+  assert.equal(cleanOcrValueByDataType('Te0/0/4', 'Port', 'port'), 'Te0/0/4');
+
+  // String Data Type
+  assert.equal(cleanOcrValueByDataType('SR NO: SR701234', 'String', 'sr_ap'), 'SR701234');
+  assert.equal(cleanOcrValueByDataType('Location: หมู่ 5 โนนนาก', 'String', 'location'), 'หมู่ 5 โนนนาก');
+});
+
