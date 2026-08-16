@@ -389,20 +389,24 @@
             </div>
           </div>
 
-          <!-- Right: Color Wheel & RGB Sliders -->
-          <div class="theme-color-editor-pane">
             <div class="color-wheel-row">
               <div class="wheel-picker-wrapper">
                 <label class="form-label" for="ctColorWheel">Color Wheel / Palette</label>
-                <div class="color-wheel-box">
+                <div class="color-wheel-box" id="ctColorWheelBox">
                   <input type="color" id="ctColorWheel" class="color-wheel-input" value="#5eead4" />
-                  <span class="color-wheel-hint">Click to open Color Wheel</span>
+                  <span class="color-wheel-hint"><i class="fa-solid fa-palette"></i> Click to open Color Wheel</span>
                 </div>
               </div>
               <div class="wheel-hex-wrapper">
                 <label class="form-label" for="ctHexInput">HEX Code</label>
                 <input type="text" id="ctHexInput" class="form-input ct-hex-input" value="#5eead4" maxlength="7" />
               </div>
+            </div>
+
+            <!-- Quick Swatches Palette -->
+            <div class="quick-swatches-group">
+              <label class="form-label">Preset Color Palette</label>
+              <div class="quick-swatches-grid" id="ctQuickSwatches"></div>
             </div>
 
             <div class="rgb-controls-group">

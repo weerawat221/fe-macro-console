@@ -453,11 +453,62 @@ function initCustomThemeModal() {
     });
   });
 
-  // Color Wheel input
+  // Color Wheel input & Box trigger
   const wheelInput = document.getElementById('ctColorWheel');
+  const wheelBox = document.getElementById('ctColorWheelBox');
+
+  const triggerColorPicker = () => {
+    if (!wheelInput) return;
+    try {
+      if (typeof wheelInput.showPicker === 'function') {
+        wheelInput.showPicker();
+      } else {
+        wheelInput.click();
+      }
+    } catch (err) {
+      wheelInput.click();
+    }
+  };
+
+  wheelBox?.addEventListener('click', (e) => {
+    if (e.target !== wheelInput) {
+      triggerColorPicker();
+    }
+  });
+
   wheelInput?.addEventListener('input', (e) => {
     updateColorFromHex(e.target.value);
   });
+  wheelInput?.addEventListener('change', (e) => {
+    updateColorFromHex(e.target.value);
+  });
+
+  // Preset Color Palette Swatches
+  const QUICK_COLORS = [
+    '#5eead4', '#2dd4bf', '#14b8a6', '#0ea5e9', '#38bdf8', '#60a5fa', '#3b82f6',
+    '#818cf8', '#6366f1', '#a855f7', '#c084fc', '#e879f9', '#f472b6', '#fb7185',
+    '#f87171', '#ef4444', '#fb923c', '#f97316', '#fbbf24', '#f59e0b', '#eab308',
+    '#a3e635', '#84cc16', '#4ade80', '#22c55e', '#ffffff', '#e2e4ea', '#94a3b8',
+    '#64748b', '#334155', '#1e293b', '#0f172a', '#12141c', '#0d0f14', '#000000'
+  ];
+
+  const swatchesContainer = document.getElementById('ctQuickSwatches');
+  if (swatchesContainer) {
+    swatchesContainer.innerHTML = '';
+    QUICK_COLORS.forEach((hex) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'quick-swatch-btn';
+      btn.style.background = hex;
+      btn.title = hex;
+      btn.setAttribute('data-color', hex.toLowerCase());
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        updateColorFromHex(hex);
+      });
+      swatchesContainer.appendChild(btn);
+    });
+  }
 
   // HEX Text Input
   const hexInput = document.getElementById('ctHexInput');
@@ -605,6 +656,16 @@ function syncPickersToHex(hex) {
   if (hexInput && hexInput.value.toLowerCase() !== hex.toLowerCase()) {
     hexInput.value = hex;
   }
+
+  // Update quick swatch active states
+  const targetHex = (hex || '').toLowerCase();
+  document.querySelectorAll('#ctQuickSwatches .quick-swatch-btn').forEach((btn) => {
+    if (btn.getAttribute('data-color') === targetHex) {
+      btn.classList.add('quick-swatch-btn--active');
+    } else {
+      btn.classList.remove('quick-swatch-btn--active');
+    }
+  });
 
   const { r, g, b } = hexToRgb(hex);
   const sliderR = document.getElementById('sliderR');
