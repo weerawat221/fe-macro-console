@@ -427,7 +427,12 @@ function cleanOcrValueByDataType(rawText, dataType = 'String', varKey = '') {
   const dt = (dataType || 'String').toLowerCase();
   const k = (varKey || '').toLowerCase();
 
-  // 1. DATA TYPE: NUMBER (or variable key matches number/vlan/onu heuristics)
+  // 1. DATA TYPE: STRING (Do not cut or strip anything for string variables)
+  if (dt === 'string') {
+    return str;
+  }
+
+  // 2. DATA TYPE: NUMBER (or variable key matches number/vlan/onu heuristics)
   if (dt === 'number' || k.includes('vlan') || k.includes('onu_idx') || k.includes('idx') || k.includes('count') || k.includes('num')) {
     // Remove thousand separators (e.g. "24,700" -> "24700")
     const withoutCommas = str.replace(/,/g, '');
@@ -439,7 +444,7 @@ function cleanOcrValueByDataType(rawText, dataType = 'String', varKey = '') {
     return str;
   }
 
-  // 2. DATA TYPE: PORT (or variable key matches port/olt heuristics)
+  // 3. DATA TYPE: PORT (or variable key matches port/olt heuristics)
   if (dt === 'port' || k.includes('port') || k.includes('olt') || k.includes('interface') || k.includes('slot')) {
     // Strip leading label prefix like "PORT: ", "OLT: ", "INTERFACE: "
     let stripped = str.replace(/^(?:PORT|OLT|INTERFACE|INT|SLOT|PON)\s*[:=\-–]?\s*/i, '');
@@ -454,7 +459,7 @@ function cleanOcrValueByDataType(rawText, dataType = 'String', varKey = '') {
     return stripped || str;
   }
 
-  // 3. DATA TYPE: IP (or variable key matches IP heuristics)
+  // 4. DATA TYPE: IP (or variable key matches IP heuristics)
   if (dt === 'ip' || (!k.includes('vlan') && (k.includes('ip') || k.startsWith('pe') || k.startsWith('ce') || k.startsWith('lan') || k.includes('stelnet')))) {
     // Check if string contains a standard IPv4 address (possibly surrounded by garbage e.g. "6 : 192.168.1.1", "PE IP: 10.0.0.1/24", "Lan: 172.17.166.89/29")
     const ipMatch = str.match(/(?:^|[^\d.])(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?:\/\d{1,2})?(?:[^\d.]|$)/);
@@ -484,10 +489,7 @@ function cleanOcrValueByDataType(rawText, dataType = 'String', varKey = '') {
     return repaired || str;
   }
 
-  // 4. DATA TYPE: STRING (Default)
-  // Strip standard "Label: " prefix if present (e.g. "SR NO : SR701234" -> "SR701234")
-  let cleanStr = str.replace(/^[A-Za-z\u0E00-\u0E7F\s()_]+[:=\-–]\s*/i, '').trim();
-  return cleanStr || str;
+  return str;
 }
 
 export {

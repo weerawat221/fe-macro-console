@@ -192,8 +192,10 @@ test('Data-Type Aware OCR Cleaning - cleanOcrValueByDataType', () => {
   assert.equal(cleanOcrValueByDataType('OLT: 1/1/1:1', 'Port', 'olt'), '1/1/1:1');
   assert.equal(cleanOcrValueByDataType('Te0/0/4', 'Port', 'port'), 'Te0/0/4');
 
-  // String Data Type
-  assert.equal(cleanOcrValueByDataType('SR NO: SR701234', 'String', 'sr_ap'), 'SR701234');
-  assert.equal(cleanOcrValueByDataType('Location: หมู่ 5 โนนนาก', 'String', 'location'), 'หมู่ 5 โนนนาก');
+  // String Data Type (Do not cut or strip anything)
+  assert.equal(cleanOcrValueByDataType('4459d9198', 'String', 'serial_number'), '4459d9198');
+  assert.equal(cleanOcrValueByDataType('SR NO: SR701234', 'String', 'sr_ap'), 'SR NO: SR701234');
+  assert.equal(cleanOcrValueByDataType('Location: หมู่ 5 โนนนาก', 'String', 'location'), 'Location: หมู่ 5 โนนนาก');
 });
+
 
