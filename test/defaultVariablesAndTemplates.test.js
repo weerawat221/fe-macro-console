@@ -56,4 +56,14 @@ describe('Default Variables and Dynamic Template Substitution', () => {
       assert.ok(!template.includes('{mask}'), `Template '${label}' should not contain {mask}`);
     });
   });
+
+  it('respects user variable deletions when normalizing stored variables', () => {
+    // User deleted 'captcha' and 'user_vlan'
+    const stored = DEFAULT_VARIABLES.filter((v) => v.key !== 'captcha' && v.key !== 'user_vlan');
+    const normalized = normalizeVariables(stored);
+
+    assert.equal(normalized.some((v) => v.key === 'captcha'), false);
+    assert.equal(normalized.some((v) => v.key === 'user_vlan'), false);
+    assert.equal(normalized.length, stored.length);
+  });
 });

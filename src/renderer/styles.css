@@ -1265,10 +1265,55 @@ select {
   gap: 8px;
 }
 
+.var-search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.var-search-icon {
+  position: absolute;
+  left: 8px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
 .var-search-input {
-  width: 160px;
-  padding: 4px 8px;
+  width: 175px;
+  padding: 4px 22px 4px 24px;
+  font-size: 10.5px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  transition: all 0.1s ease;
+}
+
+.var-search-input:focus {
+  border-color: var(--signal);
+  background: var(--bg-base);
+  outline: none;
+}
+
+.var-search-clear-btn {
+  position: absolute;
+  right: 3px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 2px 4px;
   font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.var-search-clear-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .var-list-container {

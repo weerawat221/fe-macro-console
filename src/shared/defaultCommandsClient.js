@@ -288,7 +288,7 @@ function upgradeTemplateTokens(tmpl) {
 }
 
 export function normalizeVariables(stored) {
-  if (!Array.isArray(stored) || stored.length === 0) return DEFAULT_VARIABLES;
+  if (!Array.isArray(stored)) return DEFAULT_VARIABLES;
 
   const keyMap = new Map();
   stored.forEach((v) => {
@@ -303,13 +303,6 @@ export function normalizeVariables(stored) {
         dataType: v.dataType || 'String',
         default_value: v.default_value !== undefined ? v.default_value : null,
       });
-    }
-  });
-
-  // Ensure any missing default variables are appended
-  DEFAULT_VARIABLES.forEach((def) => {
-    if (!keyMap.has(def.key)) {
-      keyMap.set(def.key, { ...def });
     }
   });
 

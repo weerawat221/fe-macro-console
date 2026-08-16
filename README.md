@@ -1,4 +1,4 @@
-# Marcruro — Field Engineer Macro Console
+# FE Macro Console (Electron rebuild)
 
 Windows keystroke-injection macro tool for field engineers working across RDM/PuTTY,
 Windows terminal, LINE, FortiClient, and browser logins. Rebuilt from the original
@@ -103,25 +103,6 @@ src/shared/             Command-tree data — defaultCommands.js (CJS, for main)
                          if you edit the seed data directly instead of through the GUI
 native/sendinput_win32/  N-API addon wrapping SendInput / GetForegroundWindow / etc.
 ```
-
-### What changed from the original Python tool
-
-- **Custom command editor** (new): every button, group, and command set is now editable
-  from Edit → add/rename/delete sets, groups, and individual command rows, persisted
-  immediately via `electron-store`. The original required editing `COMMAND_GROUPS` in
-  source and restarting.
-- **Credentials removed from source**: the original had literal device passwords (AP
-  admin password, etc.) hardcoded in `COMMAND_GROUPS`. Those are now `{cred_*}` tokens
-  resolved from Settings → Credential Vault, stored locally, never in this repo.
-- **Persisted tabs**: the original lost all tabs on close; tabs now persist across restarts.
-- **Fixed-height scrollable panel** instead of a window that resizes to fit content on
-  every render — steadier for a pinned/always-on-top utility that switches between very
-  short (Switch monitoring) and very long (LINE messaging) command lists.
-- Two intentionally-preserved original quirks, kept for behavioral fidelity: `SetForegroundWindow`'s
-  return value is not treated as fatal (Windows' focus-stealing prevention makes it an
-  unreliable signal — the original didn't check it either), and the LAN Blue Config
-  sequence doesn't re-validate the target window between each of its six sends (neither
-  did the original).
 
 ### Known limitation / follow-up
 

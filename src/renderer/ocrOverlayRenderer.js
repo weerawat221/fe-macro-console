@@ -704,11 +704,12 @@ function renderAssignmentBadges() {
     const badge = document.createElement('div');
     badge.className = 'ocr-var-badge';
     badge.style.left = `${minX}px`;
-    badge.style.top = `${Math.max(4, minY - 24)}px`;
+    badge.style.top = `${Math.max(6, minY - 28)}px`;
 
     badge.innerHTML = `
-      <span>${assign.varLabel}: <b>${assign.text}</b></span>
-      <span class="ocr-var-badge-del" title="Remove assignment"><i class="fa-solid fa-xmark"></i></span>
+      <span class="ocr-var-badge-label">${assign.varLabel}:</span>
+      <span class="ocr-var-badge-val">${assign.text}</span>
+      <button type="button" class="ocr-var-badge-del" title="Remove assignment"><i class="fa-solid fa-xmark"></i></button>
     `;
 
     badge.querySelector('.ocr-var-badge-del').addEventListener('click', (e) => {

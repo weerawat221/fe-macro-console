@@ -84,7 +84,13 @@
               templates.</span>
           </div>
           <div class="var-manager-actions">
-            <input id="varSearchInput" class="form-input var-search-input" placeholder="Search variables…" />
+            <div class="var-search-wrap">
+              <i class="fa-solid fa-magnifying-glass var-search-icon"></i>
+              <input id="varSearchInput" class="form-input var-search-input" placeholder="Search variables…" autocomplete="off" />
+              <button id="varSearchClear" class="var-search-clear-btn" title="Clear search" type="button" style="display:none;">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
             <button id="btnAddVariable" class="btn btn--primary btn--sm"><i class="fa-solid fa-plus"></i> Add Variable</button>
           </div>
         </div>

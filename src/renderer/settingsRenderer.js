@@ -136,10 +136,36 @@ function initUI() {
   // Variables actions
   document.getElementById('btnAddVariable').addEventListener('click', openNewVariableModal);
   const searchInput = document.getElementById('varSearchInput');
+  const searchClear = document.getElementById('varSearchClear');
+
+  function updateVarSearch(query) {
+    varSearchQuery = (query || '').toLowerCase().trim();
+    if (searchClear) {
+      searchClear.style.display = (query && query.length > 0) ? 'inline-flex' : 'none';
+    }
+    renderVariablesManager();
+  }
+
   if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      varSearchQuery = e.target.value.toLowerCase().trim();
-      renderVariablesManager();
+    searchInput.addEventListener('input', (e) => updateVarSearch(e.target.value));
+    searchInput.addEventListener('keyup', (e) => {
+      if (e.key === 'Escape') {
+        searchInput.value = '';
+        updateVarSearch('');
+      } else {
+        updateVarSearch(e.target.value);
+      }
+    });
+    searchInput.addEventListener('search', (e) => updateVarSearch(e.target.value));
+  }
+
+  if (searchClear) {
+    searchClear.addEventListener('click', () => {
+      if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+      }
+      updateVarSearch('');
     });
   }
 
