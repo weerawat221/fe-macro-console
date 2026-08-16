@@ -446,14 +446,14 @@ function openSettingsWindow() {
   }
 
   const { workAreaSize } = screen.getPrimaryDisplay();
-  const width = Math.min(840, workAreaSize.width - 40);
-  const height = Math.min(680, workAreaSize.height - 40);
+  const width = Math.min(1080, workAreaSize.width - 40);
+  const height = Math.min(780, workAreaSize.height - 40);
 
   settingsWindow = new BrowserWindow({
     width,
     height,
-    minWidth: 700,
-    minHeight: 500,
+    minWidth: 800,
+    minHeight: 560,
     backgroundColor: '#0d0f14',
     title: 'Marcruro — Setting',
     icon: appIconPath,
