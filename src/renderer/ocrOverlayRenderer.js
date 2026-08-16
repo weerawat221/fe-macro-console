@@ -513,6 +513,16 @@ function renderOcrWords() {
     boxEl.title = `"${w.text}" (${Math.round(w.confidence)}%)`;
     boxEl.id = `box_${w.id}`;
 
+    if (assignedVar) {
+      boxEl.setAttribute('data-assigned-var', assignedVar.varKey);
+      boxEl.addEventListener('mouseenter', () => {
+        setAssignmentHover(assignedVar.varKey, true);
+      });
+      boxEl.addEventListener('mouseleave', () => {
+        setAssignmentHover(assignedVar.varKey, false);
+      });
+    }
+
     // Click on word to select/toggle
     boxEl.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -690,6 +700,31 @@ function assignSelectedTextToVariable(varKey, varLabel, textStr, selectedWords) 
   renderOcrWords();
 }
 
+function setAssignmentHover(varKey, isHovered) {
+  const badge = document.getElementById(`badge_${varKey}`);
+  if (badge) {
+    if (isHovered) {
+      badge.classList.add('ocr-var-badge--visible');
+    } else {
+      badge.classList.remove('ocr-var-badge--visible');
+    }
+  }
+
+  const assign = assignments.get(varKey);
+  if (assign && Array.isArray(assign.wordIds)) {
+    assign.wordIds.forEach((wid) => {
+      const bEl = document.getElementById(`box_${wid}`);
+      if (bEl) {
+        if (isHovered) {
+          bEl.classList.add('ocr-word-box--assigned-hover');
+        } else {
+          bEl.classList.remove('ocr-word-box--assigned-hover');
+        }
+      }
+    });
+  }
+}
+
 function renderAssignmentBadges() {
   assignments.forEach((assign) => {
     const words = (ocrResult.words || []).filter((w) => assign.wordIds.includes(w.id));
@@ -703,6 +738,7 @@ function renderAssignmentBadges() {
 
     const badge = document.createElement('div');
     badge.className = 'ocr-var-badge';
+    badge.id = `badge_${assign.varKey}`;
     badge.style.left = `${minX}px`;
     badge.style.top = `${Math.max(6, minY - 28)}px`;
 
@@ -711,6 +747,14 @@ function renderAssignmentBadges() {
       <span class="ocr-var-badge-val">${assign.text}</span>
       <button type="button" class="ocr-var-badge-del" title="Remove assignment"><i class="fa-solid fa-xmark"></i></button>
     `;
+
+    badge.addEventListener('mouseenter', () => {
+      setAssignmentHover(assign.varKey, true);
+    });
+
+    badge.addEventListener('mouseleave', () => {
+      setAssignmentHover(assign.varKey, false);
+    });
 
     badge.querySelector('.ocr-var-badge-del').addEventListener('click', (e) => {
       e.stopPropagation();

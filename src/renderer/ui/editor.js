@@ -74,11 +74,27 @@ export function initEditor() {
         updateVarSearch(e.target.value);
       }
     });
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        updateVarSearch(e.target.value);
+      }
+    });
     searchInput.addEventListener('search', (e) => updateVarSearch(e.target.value));
   }
 
+  const searchWrap = document.querySelector('.var-search-wrap');
+  if (searchWrap) {
+    searchWrap.addEventListener('click', (e) => {
+      if (e.target !== searchClear && !searchClear?.contains(e.target)) {
+        searchInput?.focus();
+      }
+    });
+  }
+
   if (searchClear) {
-    searchClear.addEventListener('click', () => {
+    searchClear.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (searchInput) {
         searchInput.value = '';
         searchInput.focus();

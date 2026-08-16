@@ -147,10 +147,27 @@ html, body {
   border-radius: 5px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85);
   white-space: nowrap;
-  pointer-events: auto;
-  z-index: 40;
+  z-index: 50;
   user-select: none;
   box-sizing: border-box;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(2px);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+}
+
+.ocr-var-badge--visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateY(0) !important;
+}
+
+.ocr-word-box--assigned-hover {
+  background: rgba(251, 191, 36, 0.45) !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 12px var(--accent-amber, #fbbf24) !important;
 }
 
 .ocr-var-badge-label {
