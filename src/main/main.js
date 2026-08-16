@@ -15,6 +15,7 @@ const { DEFAULT_COMMAND_SETS, normalizeCommandSets } = require('../shared/defaul
 const { processOcrText, repairIpv4 } = require('../shared/networkConfigOcr');
 
 const isDev = process.argv.includes('--dev');
+const appIconPath = path.join(__dirname, '..', '..', 'assets', 'icon.png');
 
 let mainWindow = null;
 
@@ -84,6 +85,7 @@ function isOurOwnWindow(info) {
   // 1. Check known process names for our app
   if (
     procLower === 'electron' ||
+    procLower === 'marcruro' ||
     procLower === 'fe-macro-console' ||
     procLower === 'fe_macro_win32bridge' ||
     procLower === 'win32bridge' ||
@@ -94,6 +96,7 @@ function isOurOwnWindow(info) {
 
   // 2. Check known titles
   if (
+    titleLower.includes('marcruro') ||
     titleLower.includes('fe macro console') ||
     titleLower.includes('screen ocr') ||
     titleLower.startsWith('setting')
@@ -184,7 +187,8 @@ function createWindow() {
     minHeight: 420,
     alwaysOnTop: true,
     backgroundColor: '#12141a',
-    title: 'FE Macro Console',
+    title: 'Marcruro',
+    icon: appIconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -451,7 +455,8 @@ function openSettingsWindow() {
     minWidth: 700,
     minHeight: 500,
     backgroundColor: '#0d0f14',
-    title: 'FE Macro Console — Setting',
+    title: 'Marcruro — Setting',
+    icon: appIconPath,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -624,7 +629,8 @@ function openOcrOverlayWindow(captureData, activeDisplay, scaleFactor) {
     resizable: false,
     movable: false,
     backgroundColor: '#000000',
-    title: 'FE Macro Console — Screen OCR',
+    title: 'Marcruro — Screen OCR',
+    icon: appIconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

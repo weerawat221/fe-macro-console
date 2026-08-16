@@ -1,4 +1,4 @@
-# FE Macro Console (Electron rebuild)
+# Marcruro — Field Engineer Macro Console
 
 Windows keystroke-injection macro tool for field engineers working across RDM/PuTTY,
 Windows terminal, LINE, FortiClient, and browser logins. Rebuilt from the original
