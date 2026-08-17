@@ -17,6 +17,14 @@ export function initAdminAuthModal() {
   document.getElementById('adminPwConfirm')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmAdminPassword();
   });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('adminPasswordModal');
+      if (modal && !modal.classList.contains('modal-overlay--hidden')) {
+        closeAdminPasswordModal();
+      }
+    }
+  });
 }
 
 export function closeAdminPasswordModal() {
