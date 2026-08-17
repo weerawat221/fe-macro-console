@@ -23,7 +23,7 @@ let ocrOverlayWindow = null;
 
 // --- Focus tracker state ---
 let currentTargetHwnd = null;
-let lastDetectedMode = 'RDM';
+let lastDetectedMode = null;
 let trackerInterval = null;
 const TRACKER_POLL_MS = 500;
 

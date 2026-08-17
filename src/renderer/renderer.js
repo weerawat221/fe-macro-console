@@ -25,8 +25,7 @@ async function bootstrap() {
 
   // Load persisted commandSets
   const storedSets = await window.feMacro.storeGet('commandSets', null);
-  const legacySets = await window.feMacro.storeGet('commandGroups', null);
-  const normalizedSets = normalizeCommandSets(storedSets || legacySets || DEFAULT_COMMAND_SETS);
+  const normalizedSets = normalizeCommandSets(storedSets || DEFAULT_COMMAND_SETS);
 
   // Load persisted variables
   const storedVars = await window.feMacro.storeGet('variables', null);

@@ -11,12 +11,13 @@
 // default so the app runs without extra setup.
 
 const Store = require('electron-store');
-const { DEFAULT_COMMAND_GROUPS } = require('../shared/defaultCommands');
+const { DEFAULT_COMMAND_SETS, DEFAULT_VARIABLES } = require('../shared/defaultCommands');
 
 const store = new Store({
   name: 'config',
   defaults: {
-    commandGroups: DEFAULT_COMMAND_GROUPS,
+    commandSets: DEFAULT_COMMAND_SETS,
+    variables: DEFAULT_VARIABLES,
     tabs: [],
     credentials: {},
     settings: {
