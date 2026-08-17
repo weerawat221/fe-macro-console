@@ -17,6 +17,7 @@ import { renderCommandPanel } from './ui/commandPanel.js';
 import { initConfirmModal } from './ui/confirmModal.js';
 import { initEditor } from './ui/editor.js';
 import { showError } from './ui/errorBanner.js';
+import { initAdminAuthModal } from './adminAuth.js';
 
 import { loadAndApplyViewConfig, applyViewConfig, setCustomThemes } from './theme.js';
 
@@ -56,6 +57,7 @@ async function bootstrap() {
   initTabBar();
   initConfirmModal();
   initEditor();
+  initAdminAuthModal();
 
   // Load tabs and render first frame
   await loadTabsFromStore();

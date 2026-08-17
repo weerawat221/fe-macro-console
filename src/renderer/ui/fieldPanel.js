@@ -1,6 +1,7 @@
 import { state, getActiveTab, getActiveAppSubmode } from '../state.js';
 import { onTabFieldChange, recalculateActiveTabVariables } from './tabs.js';
 import { extractReferencedVariables } from '../../shared/formulaEngine.js';
+import { requireAdminPassword } from '../adminAuth.js';
 
 let lastRenderedVarKeys = '';
 
@@ -117,7 +118,7 @@ function buildColumn(fieldDefs, tab) {
 
     if (def.locked) {
       const s = document.createElement('span');
-      s.title = 'Locked — value preserved on Clear';
+      s.title = 'Locked — value saved as default and preserved on Clear';
       s.style.cssText = 'font-size:10px;opacity:0.8;display:inline-flex;align-items:center;';
       s.innerHTML = '<i class="fa-solid fa-lock" style="font-size:10px;color:var(--text-dim);"></i>';
       labelRow.appendChild(s);
@@ -150,7 +151,38 @@ function buildColumn(fieldDefs, tab) {
     }
 
     group.appendChild(labelRow);
-    group.appendChild(input);
+
+    if (def.hidden) {
+      const inputWrap = document.createElement('div');
+      inputWrap.className = 'field-input-wrap';
+      inputWrap.appendChild(input);
+
+      const eyeBtn = document.createElement('button');
+      eyeBtn.type = 'button';
+      eyeBtn.className = 'field-eye-btn';
+      eyeBtn.title = 'Reveal hidden value (Admin password required)';
+      eyeBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+
+      eyeBtn.addEventListener('click', () => {
+        if (input.type === 'password') {
+          requireAdminPassword(`Reveal {${def.key}}`, () => {
+            input.type = 'text';
+            eyeBtn.innerHTML = '<i class="fa-solid fa-eye"></i>';
+            eyeBtn.title = 'Hide value';
+          });
+        } else {
+          input.type = 'password';
+          eyeBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+          eyeBtn.title = 'Reveal hidden value (Admin password required)';
+        }
+      });
+
+      inputWrap.appendChild(eyeBtn);
+      group.appendChild(inputWrap);
+    } else {
+      group.appendChild(input);
+    }
+
     col.appendChild(group);
   });
   return col;

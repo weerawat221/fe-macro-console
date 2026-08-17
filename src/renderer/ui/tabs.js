@@ -199,8 +199,17 @@ export function onTabFieldChange(fieldKey, value) {
   if (!tab.values) tab.values = {};
   tab.values[fieldKey] = value;
 
-  // Reactively recalculate derived formula variables
+  // If variable is locked, update its default_value and persist
   const varDefs = Array.isArray(state.variables) ? state.variables : [];
+  const targetDef = varDefs.find((v) => v.key === fieldKey);
+  if (targetDef && targetDef.locked) {
+    targetDef.default_value = value;
+    if (window.feMacro?.storeSet) {
+      window.feMacro.storeSet('variables', state.variables);
+    }
+  }
+
+  // Reactively recalculate derived formula variables
   const recalcRes = recalculateVariables(varDefs, tab.values);
   tab.values = recalcRes.values;
 

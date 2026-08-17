@@ -292,6 +292,28 @@
         </div>
       </div>
     </div>
+  <!-- ============ ADMIN PASSWORD MODAL (for hidden variable ops) ============ -->
+  <div id="adminPasswordModal" class="modal-overlay modal-overlay--top modal-overlay--hidden">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="adminPwTitle">
+      <div class="modal-header">
+        <h2 id="adminPwTitle"><i class="fa-solid fa-shield-halved" style="color:var(--signal);margin-right:6px;"></i> Admin Password Required</h2>
+      </div>
+      <div class="form-body">
+        <p id="adminPwMessage" style="color:var(--text-dim);font-size:11px;margin-bottom:8px;">Enter admin password to continue.</p>
+        <label class="form-label" for="adminPwInput">Password</label>
+        <input id="adminPwInput" class="form-input" type="password" placeholder="Alphanumeric, 6+ characters" autocomplete="off" />
+        <span id="adminPwError" class="form-help" style="color:var(--error);display:none;">Incorrect password. Try again.</span>
+        <div id="adminPwSetupNote" style="display:none;">
+          <span class="form-help" style="color:var(--signal);">First use: Set a new admin password (alphanumeric, 6+ characters). This protects all Hidden Variables.</span>
+          <label class="form-label" for="adminPwConfirm" style="margin-top:8px;">Confirm Password</label>
+          <input id="adminPwConfirm" class="form-input" type="password" placeholder="Confirm password" autocomplete="off" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="adminPwCancel" class="btn btn--ghost">Cancel</button>
+        <button id="adminPwConfirmBtn" class="btn btn--primary">Confirm</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="renderer.js"></script>
