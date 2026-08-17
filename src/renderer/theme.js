@@ -144,11 +144,19 @@ export const DEFAULT_VIEW_CONFIG = {
 };
 
 export async function loadAndApplyViewConfig() {
-  customThemes = await window.feMacro.storeGet('customThemes', {});
-  const saved = await window.feMacro.storeGet('viewConfig', DEFAULT_VIEW_CONFIG);
-  const config = { ...DEFAULT_VIEW_CONFIG, ...(saved || {}) };
-  applyViewConfig(config);
-  return config;
+  try {
+    if (window.feMacro?.storeGet) {
+      customThemes = (await window.feMacro.storeGet('customThemes', {})) || {};
+      const saved = await window.feMacro.storeGet('viewConfig', DEFAULT_VIEW_CONFIG);
+      const config = { ...DEFAULT_VIEW_CONFIG, ...(saved || {}) };
+      applyViewConfig(config);
+      return config;
+    }
+  } catch (err) {
+    console.warn('Could not load viewConfig from store:', err);
+  }
+  applyViewConfig(DEFAULT_VIEW_CONFIG);
+  return { ...DEFAULT_VIEW_CONFIG };
 }
 
 export function applyViewConfig(config) {

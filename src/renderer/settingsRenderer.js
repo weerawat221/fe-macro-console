@@ -69,12 +69,16 @@ function showToast(msg, duration = 3000) {
   }, duration);
 }
 
+function renderAll() {
+  switchTab(activeNavTab);
+}
+
 // Initial bootstrap
 async function bootstrap() {
   try {
     viewConfig = await loadAndApplyViewConfig();
-    const storedSets = await window.feMacro.storeGet('commandSets', null);
-    const storedVars = await window.feMacro.storeGet('variables', null);
+    const storedSets = window.feMacro?.storeGet ? await window.feMacro.storeGet('commandSets', null) : null;
+    const storedVars = window.feMacro?.storeGet ? await window.feMacro.storeGet('variables', null) : null;
     commandSets = normalizeCommandSets(storedSets || DEFAULT_COMMAND_SETS);
     variables = normalizeVariables(storedVars || DEFAULT_VARIABLES);
 
@@ -85,8 +89,10 @@ async function bootstrap() {
     }
 
     // Load admin password setup status
-    const adminHash = await window.feMacro.storeGet('adminPwHash', null);
-    adminIsSetup = Boolean(adminHash);
+    if (window.feMacro?.storeGet) {
+      const adminHash = await window.feMacro.storeGet('adminPwHash', null);
+      adminIsSetup = Boolean(adminHash);
+    }
 
     const appKeys = Object.keys(commandSets);
     if (appKeys.length > 0) {
@@ -97,27 +103,22 @@ async function bootstrap() {
       editorActiveApp = null;
       editorActiveSubmode = null;
     }
-
-    initUI();
-    renderAll();
   } catch (err) {
     console.error('Settings bootstrap failed:', err);
+  } finally {
+    renderAll();
   }
 }
 
+// Synchronously initialize UI event listeners and initial render immediately
+initUI();
+renderAll();
+
+// Asynchronously load persisted store and re-render
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', bootstrap);
 } else {
   bootstrap();
-}
-
-function renderAll() {
-  renderEditorNav();
-  renderEditorProcs();
-  renderEditorSubmodes();
-  renderEditorGroups();
-  renderVariablesManager();
-  renderViewSettings();
 }
 
 // Sync from other window updates
@@ -301,24 +302,28 @@ function switchTab(tabKey) {
   }
 }
 
-function renderAll() {
-  switchTab(activeNavTab);
-}
-
 async function persistCommandSets() {
-  await window.feMacro.storeSet('commandSets', commandSets);
+  if (window.feMacro?.storeSet) {
+    await window.feMacro.storeSet('commandSets', commandSets);
+  }
 }
 
 async function persistVariables() {
-  await window.feMacro.storeSet('variables', variables);
+  if (window.feMacro?.storeSet) {
+    await window.feMacro.storeSet('variables', variables);
+  }
 }
 
 async function persistViewConfig() {
-  await window.feMacro.storeSet('viewConfig', viewConfig);
+  if (window.feMacro?.storeSet) {
+    await window.feMacro.storeSet('viewConfig', viewConfig);
+  }
 }
 
 async function persistCustomThemes() {
-  await window.feMacro.storeSet('customThemes', customThemes);
+  if (window.feMacro?.storeSet) {
+    await window.feMacro.storeSet('customThemes', customThemes);
+  }
 }
 
 // =========================================================
@@ -1208,8 +1213,8 @@ function removeProcFromSet(procName) {
 }
 
 function initAddProcModal() {
-  document.getElementById('addProcCancel').addEventListener('click', closeAddProcModal);
-  document.getElementById('addProcConfirm').addEventListener('click', confirmAddProcToSet);
+  document.getElementById('addProcCancel')?.addEventListener('click', closeAddProcModal);
+  document.getElementById('addProcConfirm')?.addEventListener('click', confirmAddProcToSet);
 }
 
 async function openAddProcModal() {
@@ -1341,9 +1346,9 @@ function renderEditorSubmodes() {
 }
 
 function initNewSubmodeModal() {
-  document.getElementById('nsubCancel').addEventListener('click', closeNewSubmodeModal);
-  document.getElementById('nsubCreate').addEventListener('click', confirmCreateSubmode);
-  document.getElementById('nsubName').addEventListener('keydown', (e) => {
+  document.getElementById('nsubCancel')?.addEventListener('click', closeNewSubmodeModal);
+  document.getElementById('nsubCreate')?.addEventListener('click', confirmCreateSubmode);
+  document.getElementById('nsubName')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmCreateSubmode();
   });
 }
@@ -1724,10 +1729,10 @@ function deleteGroup(groupTitle) {
 // =========================================================
 
 function initNewSetModal() {
-  document.getElementById('nsCancel').addEventListener('click', closeNewSetModal);
-  document.getElementById('nsCreate').addEventListener('click', createNewSet);
+  document.getElementById('nsCancel')?.addEventListener('click', closeNewSetModal);
+  document.getElementById('nsCreate')?.addEventListener('click', createNewSet);
 
-  document.getElementById('nsAppName').addEventListener('input', () => {
+  document.getElementById('nsAppName')?.addEventListener('input', () => {
     nsAutoNameTracking = false;
   });
 }
@@ -1889,10 +1894,10 @@ function createNewSet() {
 // =========================================================
 
 function initCommandFormModal() {
-  document.getElementById('cfCancel').addEventListener('click', closeCommandForm);
-  document.getElementById('cfSave').addEventListener('click', saveCommandForm);
-  document.getElementById('cfDelete').addEventListener('click', deleteCommandForm);
-  document.getElementById('cfTemplate').addEventListener('input', updateTokenHint);
+  document.getElementById('cfCancel')?.addEventListener('click', closeCommandForm);
+  document.getElementById('cfSave')?.addEventListener('click', saveCommandForm);
+  document.getElementById('cfDelete')?.addEventListener('click', deleteCommandForm);
+  document.getElementById('cfTemplate')?.addEventListener('input', updateTokenHint);
 }
 
 function openCommandForm(appKey, submodeKey, groupTitle, index) {
