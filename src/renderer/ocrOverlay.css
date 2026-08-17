@@ -154,7 +154,20 @@ html, body {
   visibility: hidden;
   pointer-events: none;
   transform: translateY(2px);
-  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+/* Hover bridge: ensures moving mouse across the gap from box to badge doesn't lose hover */
+.ocr-var-badge::after {
+  content: '';
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  top: -8px;
+  bottom: -18px; /* Reaches down into the word box below */
+  background: transparent;
+  pointer-events: auto;
+  z-index: -1;
 }
 
 .ocr-var-badge--visible {

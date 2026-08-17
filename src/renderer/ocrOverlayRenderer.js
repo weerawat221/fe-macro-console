@@ -681,28 +681,51 @@ function assignSelectedTextToVariable(varKey, varLabel, textStr, selectedWords) 
   renderOcrWords();
 }
 
+const assignmentHoverTimers = new Map();
+
 function setAssignmentHover(varKey, isHovered) {
-  const badge = document.getElementById(`badge_${varKey}`);
-  if (badge) {
-    if (isHovered) {
-      badge.classList.add('ocr-var-badge--visible');
-    } else {
-      badge.classList.remove('ocr-var-badge--visible');
-    }
+  // Always clear any pending timer for this varKey first
+  if (assignmentHoverTimers.has(varKey)) {
+    clearTimeout(assignmentHoverTimers.get(varKey));
+    assignmentHoverTimers.delete(varKey);
   }
 
-  const assign = assignments.get(varKey);
-  if (assign && Array.isArray(assign.wordIds)) {
-    assign.wordIds.forEach((wid) => {
-      const bEl = document.getElementById(`box_${wid}`);
-      if (bEl) {
-        if (isHovered) {
+  if (isHovered) {
+    const badge = document.getElementById(`badge_${varKey}`);
+    if (badge) {
+      badge.classList.add('ocr-var-badge--visible');
+    }
+
+    const assign = assignments.get(varKey);
+    if (assign && Array.isArray(assign.wordIds)) {
+      assign.wordIds.forEach((wid) => {
+        const bEl = document.getElementById(`box_${wid}`);
+        if (bEl) {
           bEl.classList.add('ocr-word-box--assigned-hover');
-        } else {
-          bEl.classList.remove('ocr-word-box--assigned-hover');
         }
+      });
+    }
+  } else {
+    // Debounce hiding by 300ms so moving cursor across the gap to the badge doesn't abruptly close it
+    const timer = setTimeout(() => {
+      const badge = document.getElementById(`badge_${varKey}`);
+      if (badge) {
+        badge.classList.remove('ocr-var-badge--visible');
       }
-    });
+
+      const assign = assignments.get(varKey);
+      if (assign && Array.isArray(assign.wordIds)) {
+        assign.wordIds.forEach((wid) => {
+          const bEl = document.getElementById(`box_${wid}`);
+          if (bEl) {
+            bEl.classList.remove('ocr-word-box--assigned-hover');
+          }
+        });
+      }
+      assignmentHoverTimers.delete(varKey);
+    }, 300);
+
+    assignmentHoverTimers.set(varKey, timer);
   }
 }
 
@@ -739,6 +762,10 @@ function renderAssignmentBadges() {
 
     badge.querySelector('.ocr-var-badge-del').addEventListener('click', (e) => {
       e.stopPropagation();
+      if (assignmentHoverTimers.has(assign.varKey)) {
+        clearTimeout(assignmentHoverTimers.get(assign.varKey));
+        assignmentHoverTimers.delete(assign.varKey);
+      }
       assignments.delete(assign.varKey);
       renderOcrWords();
     });
@@ -746,6 +773,7 @@ function renderAssignmentBadges() {
     ocrBoxesContainer.appendChild(badge);
   });
 }
+
 
 function updateApplyButton() {
   const count = assignments.size;
