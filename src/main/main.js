@@ -18,6 +18,8 @@ const isDev = process.argv.includes('--dev');
 const appIconPath = path.join(__dirname, '..', '..', 'assets', 'icon.png');
 
 let mainWindow = null;
+let settingsWindow = null;
+let ocrOverlayWindow = null;
 
 // --- Focus tracker state ---
 let currentTargetHwnd = null;
@@ -208,8 +210,20 @@ function createWindow() {
     });
   }
 
+  mainWindow.on('close', () => {
+    // Close settings window immediately if open
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.close();
+    }
+    // Close OCR overlay window immediately if open
+    if (ocrOverlayWindow && !ocrOverlayWindow.isDestroyed()) {
+      ocrOverlayWindow.close();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
+    app.quit();
   });
 
   updateCachedCommandSets();
@@ -436,8 +450,6 @@ ipcMain.handle('macro:sendBlueConfigIp', async (_evt, ipString, appKey) => {
 // IPC: Persisted Storage
 // =========================================================
 
-let settingsWindow = null;
-
 function openSettingsWindow() {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.show();
@@ -565,7 +577,6 @@ ipcMain.handle('app:getWindowSupport', () => ({ nativeSupported: win32.isSupport
 // OCR Screen Capture & Text Recognition
 // =========================================================
 
-let ocrOverlayWindow = null;
 let ocrWorker = null;
 
 async function getOcrWorker() {
