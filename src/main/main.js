@@ -871,28 +871,38 @@ function startAutoMoverLoop() {
       let currentCursor = { x: 0, y: 0 };
       try {
         currentCursor = screen.getCursorScreenPoint();
-      } catch {}
+      } catch { }
 
-      // If user physically moved the mouse cursor to a new spot (while we were not mid-jiggle):
-      if (!isJigglingInProgress) {
-        const movedDist = Math.hypot(
-          currentCursor.x - lastRealUserCursorPoint.x,
-          currentCursor.y - lastRealUserCursorPoint.y
-        );
-        if (movedDist > 2) {
-          lastRealUserActivityTime = Date.now();
-          lastRealUserCursorPoint = currentCursor;
+      // Check real user input (mouse movement or keyboard press)
+      let hasRealUserInput = false;
+      const movedDist = Math.hypot(
+        currentCursor.x - lastRealUserCursorPoint.x,
+        currentCursor.y - lastRealUserCursorPoint.y
+      );
+
+      if (!isJigglingInProgress && movedDist > 3) {
+        hasRealUserInput = true;
+      } else if (!isJigglingInProgress) {
+        const rawIdleMs = await win32.getIdleTime();
+        if (lastJiggleTimestamp === 0) {
+          // No jiggle has happened yet; any system idle < 1000ms is real user input
+          if (rawIdleMs < 1000) {
+            hasRealUserInput = true;
+          }
         } else {
-          // Check if user typed on the keyboard (Win32 getIdleTime < 1000ms and no jiggle in last 1.5s)
-          const timeSinceLastJiggle = Date.now() - lastJiggleTimestamp;
-          if (timeSinceLastJiggle > 1500) {
-            const rawIdleMs = await win32.getIdleTime();
-            if (rawIdleMs < 1000) {
-              lastRealUserActivityTime = Date.now();
-              lastRealUserCursorPoint = currentCursor;
-            }
+          // A jiggle has occurred. The jiggle itself reset rawIdleMs to 0 at lastJiggleTimestamp.
+          // Real user input occurred if the time elapsed since last jiggle exceeds rawIdleMs by > 800ms.
+          const timeSinceJiggle = Date.now() - lastJiggleTimestamp;
+          if (timeSinceJiggle - rawIdleMs > 800) {
+            hasRealUserInput = true;
           }
         }
+      }
+
+      if (hasRealUserInput) {
+        lastRealUserActivityTime = Date.now();
+        lastRealUserCursorPoint = currentCursor;
+        lastJiggleTimestamp = 0;
       }
 
       const elapsedIdle = Date.now() - lastRealUserActivityTime;
@@ -909,7 +919,7 @@ function startAutoMoverLoop() {
           lastRealUserCursorPoint = posBeforeJiggle;
           setTimeout(() => {
             isJigglingInProgress = false;
-          }, 120);
+          }, 150);
         }
       }
 
