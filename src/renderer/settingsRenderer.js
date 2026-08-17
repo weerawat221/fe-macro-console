@@ -70,36 +70,46 @@ function showToast(msg, duration = 3000) {
 }
 
 // Initial bootstrap
-window.addEventListener('DOMContentLoaded', async () => {
-  viewConfig = await loadAndApplyViewConfig();
-  const storedSets = await window.feMacro.storeGet('commandSets', null);
-  const storedVars = await window.feMacro.storeGet('variables', null);
-  commandSets = normalizeCommandSets(storedSets || DEFAULT_COMMAND_SETS);
-  variables = normalizeVariables(storedVars || DEFAULT_VARIABLES);
+async function bootstrap() {
+  try {
+    viewConfig = await loadAndApplyViewConfig();
+    const storedSets = await window.feMacro.storeGet('commandSets', null);
+    const storedVars = await window.feMacro.storeGet('variables', null);
+    commandSets = normalizeCommandSets(storedSets || DEFAULT_COMMAND_SETS);
+    variables = normalizeVariables(storedVars || DEFAULT_VARIABLES);
 
-  // Sync normalized lists back to store so both windows stay in sync
-  if (window.feMacro?.storeSet) {
-    window.feMacro.storeSet('variables', variables);
-    window.feMacro.storeSet('commandSets', commandSets);
+    // Sync normalized lists back to store so both windows stay in sync
+    if (window.feMacro?.storeSet) {
+      window.feMacro.storeSet('variables', variables);
+      window.feMacro.storeSet('commandSets', commandSets);
+    }
+
+    // Load admin password setup status
+    const adminHash = await window.feMacro.storeGet('adminPwHash', null);
+    adminIsSetup = Boolean(adminHash);
+
+    const appKeys = Object.keys(commandSets);
+    if (appKeys.length > 0) {
+      editorActiveApp = appKeys[0];
+      const subKeys = Object.keys(commandSets[editorActiveApp]?.submodes || {});
+      editorActiveSubmode = subKeys[0] || 'DEFAULT';
+    } else {
+      editorActiveApp = null;
+      editorActiveSubmode = null;
+    }
+
+    initUI();
+    renderAll();
+  } catch (err) {
+    console.error('Settings bootstrap failed:', err);
   }
+}
 
-  // Load admin password setup status
-  const adminHash = await window.feMacro.storeGet('adminPwHash', null);
-  adminIsSetup = Boolean(adminHash);
-
-  const appKeys = Object.keys(commandSets);
-  if (appKeys.length > 0) {
-    editorActiveApp = appKeys[0];
-    const subKeys = Object.keys(commandSets[editorActiveApp]?.submodes || {});
-    editorActiveSubmode = subKeys[0] || 'DEFAULT';
-  } else {
-    editorActiveApp = null;
-    editorActiveSubmode = null;
-  }
-
-  initUI();
-  renderAll();
-});
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrap);
+} else {
+  bootstrap();
+}
 
 function renderAll() {
   renderEditorNav();
@@ -111,7 +121,7 @@ function renderAll() {
 }
 
 // Sync from other window updates
-if (window.feMacro.onStoreUpdated) {
+if (window.feMacro?.onStoreUpdated) {
   window.feMacro.onStoreUpdated(async ({ key, value }) => {
     if (key === 'commandSets') {
       commandSets = value || {};
@@ -139,25 +149,24 @@ if (window.feMacro.onStoreUpdated) {
   });
 }
 
-
 function initUI() {
   // Navigation tabs
-  document.getElementById('tabNavApps').addEventListener('click', () => switchTab('apps'));
-  document.getElementById('tabNavVariables').addEventListener('click', () => switchTab('variables'));
-  document.getElementById('tabNavView').addEventListener('click', () => switchTab('view'));
+  document.getElementById('tabNavApps')?.addEventListener('click', () => switchTab('apps'));
+  document.getElementById('tabNavVariables')?.addEventListener('click', () => switchTab('variables'));
+  document.getElementById('tabNavView')?.addEventListener('click', () => switchTab('view'));
 
   // Export / Import
-  document.getElementById('btnExportConfig').addEventListener('click', handleExportConfig);
-  document.getElementById('btnImportConfig').addEventListener('click', handleImportConfig);
+  document.getElementById('btnExportConfig')?.addEventListener('click', handleExportConfig);
+  document.getElementById('btnImportConfig')?.addEventListener('click', handleImportConfig);
 
   // Command sets actions
-  document.getElementById('btnAddMode').addEventListener('click', openNewSetModal);
-  document.getElementById('btnAddSubmode').addEventListener('click', openNewSubmodeModal);
-  document.getElementById('btnAddGroup').addEventListener('click', addNewGroup);
-  document.getElementById('btnAddProcToSet').addEventListener('click', openAddProcModal);
+  document.getElementById('btnAddMode')?.addEventListener('click', openNewSetModal);
+  document.getElementById('btnAddSubmode')?.addEventListener('click', openNewSubmodeModal);
+  document.getElementById('btnAddGroup')?.addEventListener('click', addNewGroup);
+  document.getElementById('btnAddProcToSet')?.addEventListener('click', openAddProcModal);
 
   // Variables actions
-  document.getElementById('btnAddVariable').addEventListener('click', openNewVariableModal);
+  document.getElementById('btnAddVariable')?.addEventListener('click', openNewVariableModal);
   const searchInput = document.getElementById('varSearchInput');
   const searchClear = document.getElementById('varSearchClear');
 
@@ -881,16 +890,16 @@ function processImportData(data) {
 }
 
 function initConflictModal() {
-  document.getElementById('conflictCancel').addEventListener('click', closeConflictModal);
-  document.getElementById('conflictConfirm').addEventListener('click', confirmApplyImportWithConflicts);
+  document.getElementById('conflictCancel')?.addEventListener('click', closeConflictModal);
+  document.getElementById('conflictConfirm')?.addEventListener('click', confirmApplyImportWithConflicts);
 
-  document.getElementById('btnConflictAllOverwrite').addEventListener('click', () => {
+  document.getElementById('btnConflictAllOverwrite')?.addEventListener('click', () => {
     setAllConflictRadios('overwrite');
   });
-  document.getElementById('btnConflictAllKeepBoth').addEventListener('click', () => {
+  document.getElementById('btnConflictAllKeepBoth')?.addEventListener('click', () => {
     setAllConflictRadios('keep_both');
   });
-  document.getElementById('btnConflictAllSkip').addEventListener('click', () => {
+  document.getElementById('btnConflictAllSkip')?.addEventListener('click', () => {
     setAllConflictRadios('skip');
   });
 }
@@ -2634,9 +2643,9 @@ function applyFormulaStudio() {
 let adminSessionUntil = 0; // Timestamp when active admin authentication expires (2 mins)
 
 function initAdminPasswordModal() {
-  document.getElementById('adminPwCancel').addEventListener('click', closeAdminPasswordModal);
-  document.getElementById('adminPwConfirmBtn').addEventListener('click', confirmAdminPassword);
-  document.getElementById('adminPwInput').addEventListener('keydown', (e) => {
+  document.getElementById('adminPwCancel')?.addEventListener('click', closeAdminPasswordModal);
+  document.getElementById('adminPwConfirmBtn')?.addEventListener('click', confirmAdminPassword);
+  document.getElementById('adminPwInput')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmAdminPassword();
   });
   document.getElementById('adminPwConfirm')?.addEventListener('keydown', (e) => {
@@ -2748,12 +2757,12 @@ async function confirmAdminPassword() {
 // =============================================================
 
 function initExportPasswordModal() {
-  document.getElementById('exportPwCancel').addEventListener('click', closeExportPasswordModal);
-  document.getElementById('exportPwConfirmBtn').addEventListener('click', confirmExportPassword);
-  document.getElementById('exportPwInput').addEventListener('keydown', (e) => {
+  document.getElementById('exportPwCancel')?.addEventListener('click', closeExportPasswordModal);
+  document.getElementById('exportPwConfirmBtn')?.addEventListener('click', confirmExportPassword);
+  document.getElementById('exportPwInput')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmExportPassword();
   });
-  document.getElementById('exportPwConfirm').addEventListener('keydown', (e) => {
+  document.getElementById('exportPwConfirm')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmExportPassword();
   });
 }
@@ -2806,9 +2815,9 @@ async function confirmExportPassword() {
 let pendingEncryptedImport = null;
 
 function initImportPasswordModal() {
-  document.getElementById('importPwCancel').addEventListener('click', closeImportPasswordModal);
-  document.getElementById('importPwConfirmBtn').addEventListener('click', confirmImportPassword);
-  document.getElementById('importPwInput').addEventListener('keydown', (e) => {
+  document.getElementById('importPwCancel')?.addEventListener('click', closeImportPasswordModal);
+  document.getElementById('importPwConfirmBtn')?.addEventListener('click', confirmImportPassword);
+  document.getElementById('importPwInput')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') confirmImportPassword();
   });
 }

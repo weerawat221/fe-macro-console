@@ -481,6 +481,14 @@ function openSettingsWindow() {
   settingsWindow.setMenuBarVisibility(false);
   settingsWindow.loadFile(path.join(__dirname, '..', 'renderer', 'settings.html'));
 
+  if (isDev) {
+    settingsWindow.webContents.openDevTools({ mode: 'detach' });
+    settingsWindow.webContents.on('console-message', (_evt, level, message, line, sourceId) => {
+      const levelNames = ['LOG', 'WARN', 'ERROR', 'INFO'];
+      console.log(`[settings:${levelNames[level] || level}] ${message} (${sourceId}:${line})`);
+    });
+  }
+
   settingsWindow.on('closed', () => {
     settingsWindow = null;
   });
