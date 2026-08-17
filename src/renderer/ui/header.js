@@ -9,9 +9,6 @@ import { openEditorModal } from './editor.js';
 
 let fieldsVisible = true;
 let autoMoverActive = false;
-let autoMoverInterval = null;
-let lastUserActivity = Date.now();
-const IDLE_THRESHOLD_MS = 180000; // 3 minutes
 
 export function initHeader() {
   document.getElementById('btnOcrCapture')?.addEventListener('click', () => {
@@ -53,8 +50,28 @@ export function initHeader() {
   const autoBtn = document.getElementById('btnAutoMover');
   if (autoBtn) {
     autoBtn.addEventListener('click', toggleAutoMover);
-    window.addEventListener('mousemove', resetActivity);
-    window.addEventListener('keydown', resetActivity);
+  }
+
+  // Listen to main process system-wide AutoMover ticks
+  if (window.feMacro?.onAutoMoverTick) {
+    window.feMacro.onAutoMoverTick(({ enabled, remainingSec, isJiggling }) => {
+      autoMoverActive = Boolean(enabled);
+      const dot = document.getElementById('autoMoverDot');
+      const label = document.getElementById('autoMoverLabel');
+      const timer = document.getElementById('autoMoverTimer');
+
+      if (autoMoverActive) {
+        if (dot) dot.className = 'focus-dot focus-dot--live';
+        if (label) label.textContent = isJiggling ? 'AFK' : 'ACTIVE';
+        if (timer) {
+          timer.textContent = isJiggling ? 'Jiggle (5s)' : `${remainingSec}s`;
+        }
+      } else {
+        if (dot) dot.className = 'focus-dot focus-dot--idle';
+        if (label) label.textContent = 'IDLE';
+        if (timer) timer.textContent = '';
+      }
+    });
   }
 
   window.feMacro.onFocusChanged((payload) => {
@@ -72,39 +89,10 @@ export function initHeader() {
   updateFocusIndicator();
 }
 
-function resetActivity() {
-  lastUserActivity = Date.now();
-}
-
-function toggleAutoMover() {
+async function toggleAutoMover() {
   autoMoverActive = !autoMoverActive;
-  const dot = document.getElementById('autoMoverDot');
-  const label = document.getElementById('autoMoverLabel');
-  const timer = document.getElementById('autoMoverTimer');
-
-  if (autoMoverActive) {
-    if (dot) dot.className = 'focus-dot focus-dot--live';
-    if (label) label.textContent = 'ACTIVE';
-    lastUserActivity = Date.now();
-
-    if (!autoMoverInterval) {
-      autoMoverInterval = setInterval(() => {
-        if (!autoMoverActive) return;
-        const elapsed = Date.now() - lastUserActivity;
-        const remainingSec = Math.max(0, Math.ceil((IDLE_THRESHOLD_MS - elapsed) / 1000));
-        if (timer) {
-          timer.textContent = `${remainingSec}s`;
-        }
-      }, 1000);
-    }
-  } else {
-    if (dot) dot.className = 'focus-dot focus-dot--idle';
-    if (label) label.textContent = 'IDLE';
-    if (timer) timer.textContent = '';
-    if (autoMoverInterval) {
-      clearInterval(autoMoverInterval);
-      autoMoverInterval = null;
-    }
+  if (window.feMacro?.autoMoverToggle) {
+    await window.feMacro.autoMoverToggle(autoMoverActive);
   }
 }
 

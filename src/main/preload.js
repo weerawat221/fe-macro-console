@@ -53,6 +53,15 @@ contextBridge.exposeInMainWorld('feMacro', {
     return () => ipcRenderer.removeListener('ocr:captureData', handler);
   },
 
+  // --- auto-mover / AFK prevention ---
+  autoMoverToggle: (enabled) => ipcRenderer.invoke('autoMover:toggle', enabled),
+  autoMoverGetState: () => ipcRenderer.invoke('autoMover:getState'),
+  onAutoMoverTick: (callback) => {
+    const handler = (_evt, payload) => callback(payload);
+    ipcRenderer.on('autoMover:tick', handler);
+    return () => ipcRenderer.removeListener('autoMover:tick', handler);
+  },
+
   // --- environment ---
   getWindowSupport: () => ipcRenderer.invoke('app:getWindowSupport'),
 });

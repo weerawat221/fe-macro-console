@@ -197,6 +197,24 @@ async function captureScreenPoint(cursorX, cursorY) {
   return res || { ok: false };
 }
 
+async function getIdleTime() {
+  if (!isSupported) return 0;
+  const res = await sendCommand('GET_IDLE_TIME');
+  return res && res.ok ? (res.idleMs || 0) : 0;
+}
+
+async function jiggleMouse(distance = 20) {
+  if (!isSupported) return false;
+  const res = await sendCommand(`JIGGLE_MOUSE|${distance}`);
+  return res && res.ok === true;
+}
+
+async function moveMouseRelative(dx, dy) {
+  if (!isSupported) return false;
+  const res = await sendCommand(`MOVE_MOUSE_RELATIVE|${dx}|${dy}`);
+  return res && res.ok === true;
+}
+
 if (isSupported) {
   startBridge();
 }
@@ -213,4 +231,7 @@ module.exports = {
   captureScreen,
   captureScreenRect,
   captureScreenPoint,
+  getIdleTime,
+  jiggleMouse,
+  moveMouseRelative,
 };

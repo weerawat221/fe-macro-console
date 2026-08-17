@@ -97,6 +97,18 @@ namespace Win32Bridge {
         [DllImport("user32.dll")]
         static extern bool SetProcessDPIAware();
 
+        [StructLayout(LayoutKind.Sequential)]
+        struct LASTINPUTINFO {
+            public uint cbSize;
+            public uint dwTime;
+        }
+
+        [DllImport("user32.dll")]
+        static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+
+        [DllImport("kernel32.dll")]
+        static extern uint GetTickCount();
+
         const int SRCCOPY = 0x00CC0020;
         const int SM_XVIRTUALSCREEN = 76;
         const int SM_YVIRTUALSCREEN = 77;
@@ -105,7 +117,9 @@ namespace Win32Bridge {
 
         const int SW_SHOW = 5;
         const int SW_RESTORE = 9;
+        const uint INPUT_MOUSE = 0;
         const uint INPUT_KEYBOARD = 1;
+        const uint MOUSEEVENTF_MOVE = 0x0001;
         const uint KEYEVENTF_KEYUP = 0x0002;
         const uint KEYEVENTF_UNICODE = 0x0004;
         const byte VK_MENU = 0x12;
@@ -152,6 +166,26 @@ namespace Win32Bridge {
         }
 
         static readonly int InputSize = Marshal.SizeOf(typeof(INPUT));
+
+        static void JiggleMouse(int distance) {
+            if (distance <= 0) distance = 20;
+
+            INPUT inputRight = new INPUT();
+            inputRight.type = INPUT_MOUSE;
+            inputRight.mi.dx = distance;
+            inputRight.mi.dy = 0;
+            inputRight.mi.dwFlags = MOUSEEVENTF_MOVE;
+            SendInput(1, new INPUT[] { inputRight }, InputSize);
+
+            Thread.Sleep(40);
+
+            INPUT inputLeft = new INPUT();
+            inputLeft.type = INPUT_MOUSE;
+            inputLeft.mi.dx = -distance;
+            inputLeft.mi.dy = 0;
+            inputLeft.mi.dwFlags = MOUSEEVENTF_MOVE;
+            SendInput(1, new INPUT[] { inputLeft }, InputSize);
+        }
 
         static bool RobustFocusWindow(IntPtr hWnd) {
             if (!IsWindow(hWnd)) return false;
@@ -558,6 +592,37 @@ namespace Win32Bridge {
                         DeleteObject(hBitmap);
                         DeleteDC(hMemDC);
                         ReleaseDC(hDesk, hDeskDC);
+                    }
+                    else if (cmd == "GET_IDLE_TIME") {
+                        LASTINPUTINFO lii = new LASTINPUTINFO();
+                        lii.cbSize = (uint)Marshal.SizeOf(typeof(LASTINPUTINFO));
+                        if (GetLastInputInfo(ref lii)) {
+                            uint tick = GetTickCount();
+                            uint idleMs = tick - lii.dwTime;
+                            writer.WriteLine(string.Format("{{\"ok\":true,\"idleMs\":{0}}}", idleMs));
+                        } else {
+                            writer.WriteLine("{\"ok\":false,\"idleMs\":0}");
+                        }
+                    }
+                    else if (cmd == "JIGGLE_MOUSE") {
+                        int dist = 20;
+                        if (parts.Length > 1) int.TryParse(parts[1], out dist);
+                        if (dist <= 0) dist = 20;
+                        JiggleMouse(dist);
+                        writer.WriteLine("{\"ok\":true}");
+                    }
+                    else if (cmd == "MOVE_MOUSE_RELATIVE" && parts.Length >= 3) {
+                        int dx = 0;
+                        int dy = 0;
+                        int.TryParse(parts[1], out dx);
+                        int.TryParse(parts[2], out dy);
+                        INPUT inp = new INPUT();
+                        inp.type = INPUT_MOUSE;
+                        inp.mi.dx = dx;
+                        inp.mi.dy = dy;
+                        inp.mi.dwFlags = MOUSEEVENTF_MOVE;
+                        SendInput(1, new INPUT[] { inp }, InputSize);
+                        writer.WriteLine("{\"ok\":true}");
                     }
                     else {
                         writer.WriteLine("{\"ok\":false,\"reason\":\"Unknown command\"}");

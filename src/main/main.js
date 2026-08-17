@@ -838,3 +838,77 @@ ipcMain.handle('ocr:closeOverlay', () => {
   return true;
 });
 
+// =========================================================
+// Auto-Mover / AFK Prevention Loop (System-wide idle detection & mouse jiggle)
+// =========================================================
+
+const IDLE_THRESHOLD_MS = 180000; // 180 seconds (3 minutes)
+const JIGGLE_INTERVAL_MS = 5000; // Jiggle mouse every 5 seconds when idle >= 180s
+
+let autoMoverActive = false;
+let autoMoverInterval = null;
+let lastJiggleTimestamp = 0;
+
+function startAutoMoverLoop() {
+  if (autoMoverInterval) clearInterval(autoMoverInterval);
+
+  autoMoverInterval = setInterval(async () => {
+    if (!autoMoverActive) return;
+
+    try {
+      const idleMs = await win32.getIdleTime();
+      const isAfk = idleMs >= IDLE_THRESHOLD_MS;
+      const remainingSec = Math.max(0, Math.ceil((IDLE_THRESHOLD_MS - idleMs) / 1000));
+
+      if (isAfk) {
+        const now = Date.now();
+        if (now - lastJiggleTimestamp >= JIGGLE_INTERVAL_MS) {
+          lastJiggleTimestamp = now;
+          await win32.jiggleMouse(20);
+        }
+      }
+
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('autoMover:tick', {
+          enabled: true,
+          remainingSec,
+          isJiggling: isAfk,
+          idleMs,
+        });
+      }
+    } catch (err) {
+      console.error('AutoMover loop error:', err);
+    }
+  }, 1000);
+}
+
+function stopAutoMoverLoop() {
+  if (autoMoverInterval) {
+    clearInterval(autoMoverInterval);
+    autoMoverInterval = null;
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('autoMover:tick', {
+      enabled: false,
+      remainingSec: 180,
+      isJiggling: false,
+      idleMs: 0,
+    });
+  }
+}
+
+ipcMain.handle('autoMover:toggle', async (_evt, enable) => {
+  autoMoverActive = Boolean(enable);
+  if (autoMoverActive) {
+    startAutoMoverLoop();
+  } else {
+    stopAutoMoverLoop();
+  }
+  return { ok: true, active: autoMoverActive };
+});
+
+ipcMain.handle('autoMover:getState', async () => {
+  return { active: autoMoverActive };
+});
+
+
