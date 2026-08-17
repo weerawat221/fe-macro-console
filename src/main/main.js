@@ -873,43 +873,40 @@ function startAutoMoverLoop() {
         currentCursor = screen.getCursorScreenPoint();
       } catch { }
 
-      // Check real user input (mouse movement or keyboard press)
-      let hasRealUserInput = false;
+      const elapsedIdle = Date.now() - lastRealUserActivityTime;
+      const isAfk = elapsedIdle >= IDLE_THRESHOLD_MS;
+
       const movedDist = Math.hypot(
         currentCursor.x - lastRealUserCursorPoint.x,
         currentCursor.y - lastRealUserCursorPoint.y
       );
 
-      if (!isJigglingInProgress && movedDist > 3) {
-        hasRealUserInput = true;
-      } else if (!isJigglingInProgress) {
-        const rawIdleMs = await win32.getIdleTime();
-        if (lastJiggleTimestamp === 0) {
-          // No jiggle has happened yet; any system idle < 1000ms is real user input
+      let userInterrupted = false;
+
+      if (!isJigglingInProgress) {
+        if (movedDist > 4) {
+          // Real physical mouse movement detected
+          userInterrupted = true;
+        } else if (!isAfk) {
+          // During active countdown (before AFK), keyboard activity also resets the countdown
+          const rawIdleMs = await win32.getIdleTime();
           if (rawIdleMs < 1000) {
-            hasRealUserInput = true;
-          }
-        } else {
-          // A jiggle has occurred. The jiggle itself reset rawIdleMs to 0 at lastJiggleTimestamp.
-          // Real user input occurred if the time elapsed since last jiggle exceeds rawIdleMs by > 800ms.
-          const timeSinceJiggle = Date.now() - lastJiggleTimestamp;
-          if (timeSinceJiggle - rawIdleMs > 800) {
-            hasRealUserInput = true;
+            userInterrupted = true;
           }
         }
       }
 
-      if (hasRealUserInput) {
+      if (userInterrupted) {
         lastRealUserActivityTime = Date.now();
         lastRealUserCursorPoint = currentCursor;
         lastJiggleTimestamp = 0;
       }
 
-      const elapsedIdle = Date.now() - lastRealUserActivityTime;
-      const isAfk = elapsedIdle >= IDLE_THRESHOLD_MS;
-      const remainingSec = Math.max(0, Math.ceil((IDLE_THRESHOLD_MS - elapsedIdle) / 1000));
+      const updatedElapsedIdle = Date.now() - lastRealUserActivityTime;
+      const updatedIsAfk = updatedElapsedIdle >= IDLE_THRESHOLD_MS;
+      const remainingSec = Math.max(0, Math.ceil((IDLE_THRESHOLD_MS - updatedElapsedIdle) / 1000));
 
-      if (isAfk) {
+      if (updatedIsAfk) {
         const now = Date.now();
         if (now - lastJiggleTimestamp >= JIGGLE_INTERVAL_MS) {
           lastJiggleTimestamp = now;
@@ -919,7 +916,7 @@ function startAutoMoverLoop() {
           lastRealUserCursorPoint = posBeforeJiggle;
           setTimeout(() => {
             isJigglingInProgress = false;
-          }, 150);
+          }, 200);
         }
       }
 
@@ -927,8 +924,8 @@ function startAutoMoverLoop() {
         mainWindow.webContents.send('autoMover:tick', {
           enabled: true,
           remainingSec,
-          isJiggling: isAfk,
-          idleMs: elapsedIdle,
+          isJiggling: updatedIsAfk,
+          idleMs: updatedElapsedIdle,
         });
       }
     } catch (err) {
