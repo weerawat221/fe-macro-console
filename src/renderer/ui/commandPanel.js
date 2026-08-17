@@ -9,11 +9,17 @@ export function renderCommandPanel() {
   const panel = document.getElementById('commandPanel');
   panel.innerHTML = '';
 
-  const activeAppKey = state.lastDetectedMode || Object.keys(state.commandSets)[0] || 'RDM';
+  const appKeys = Object.keys(state.commandSets);
+  if (appKeys.length === 0) {
+    drawEmptyState(panel, 'No command sets configured. Click Setting to add a command set.');
+    return;
+  }
+
+  const activeAppKey = state.lastDetectedMode || appKeys[0];
   const app = state.commandSets[activeAppKey];
 
   if (!app || !app.submodes) {
-    drawEmptyState(panel, `No commands configured for ${activeAppKey}. Use Edit to add some.`);
+    drawEmptyState(panel, `No commands configured for ${activeAppKey}. Click Setting to add commands.`);
     return;
   }
 

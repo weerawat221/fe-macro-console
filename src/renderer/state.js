@@ -13,19 +13,17 @@ export const state = {
   // --- focus tracking ---
   currentTargetHwnd: null,
   focusTitle: '',
-  lastDetectedMode: 'RDM',
+  lastDetectedMode: null,
 
   // --- active sub-mode mapping per application ---
   // e.g. { RDM: 'AP', LINE: 'DEFAULT', MY_APP: 'CONFIG' }
-  activeSubmodes: {
-    RDM: 'AP',
-  },
+  activeSubmodes: {},
 
   // --- dynamic command sets tree (by application key) ---
   commandSets: {},
 
   // --- global variable definitions ---
-  variables: [...DEFAULT_VARIABLES],
+  variables: [],
 
   // --- input fields filter mode ---
   showAllFields: false, // false = used only in active mode, true = show all fields
@@ -35,8 +33,8 @@ export const state = {
 
   // --- editor modal scratch state ---
   editorNavTab: 'apps', // 'apps' | 'variables'
-  editorActiveApp: 'RDM',
-  editorActiveSubmode: 'AP',
+  editorActiveApp: null,
+  editorActiveSubmode: null,
 };
 
 export function setState(patch) {

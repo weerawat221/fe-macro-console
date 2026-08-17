@@ -117,19 +117,9 @@ function initEventListeners() {
 }
 
 function loadCaptureData(data) {
-  availableVariables = Array.isArray(data.variables) && data.variables.length > 0
-    ? data.variables
-    : [
-        { key: 'sr_ap', label: 'SR NAME (AP)' },
-        { key: 'port', label: 'PORT' },
-        { key: 'ce_ip', label: 'CE IP' },
-        { key: 'lan_ip', label: 'LAN IP' },
-        { key: 'pppoe_user', label: 'PPPOE USER' },
-        { key: 'password', label: 'PASSWORD' },
-        { key: 'vlan', label: 'VLAN' },
-      ];
-
+  availableVariables = Array.isArray(data.variables) ? data.variables : [];
   savedOcrMemory = data.ocrMemory || null;
+
 
   canvasWidth = window.innerWidth;
   canvasHeight = window.innerHeight;
@@ -622,6 +612,14 @@ function showVariablePopover() {
 
 function renderVariableButtons(list, selectedWords) {
   varPopoverList.innerHTML = '';
+  if (!list || list.length === 0) {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.style.cssText = 'color:var(--text-dim);font-size:11px;padding:16px 8px;text-align:center;line-height:1.4;';
+    emptyDiv.innerHTML = 'No variables defined.<br><span style="font-size:9.5px;color:var(--text-muted);">Add variables in Settings first.</span>';
+    varPopoverList.appendChild(emptyDiv);
+    return;
+  }
+
   list.forEach((v) => {
     const btn = document.createElement('button');
     btn.className = 'var-popover-item';

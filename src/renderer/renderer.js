@@ -39,8 +39,8 @@ async function bootstrap() {
 
   const showAllFields = await window.feMacro.storeGet('showAllFields', false);
 
-  const firstAppKey = Object.keys(normalizedSets)[0] || 'RDM';
-  const firstSubmode = Object.keys(normalizedSets[firstAppKey]?.submodes || {})[0] || 'DEFAULT';
+  const firstAppKey = Object.keys(normalizedSets)[0] || null;
+  const firstSubmode = firstAppKey ? (Object.keys(normalizedSets[firstAppKey]?.submodes || {})[0] || 'DEFAULT') : null;
 
   setState({
     commandSets: normalizedSets,
@@ -48,9 +48,8 @@ async function bootstrap() {
     showAllFields: !!showAllFields,
     editorActiveApp: firstAppKey,
     editorActiveSubmode: firstSubmode,
-    activeSubmodes: {
-      RDM: 'AP',
-    },
+    activeSubmodes: {},
+    lastDetectedMode: firstAppKey,
   });
 
   // Init UI zones

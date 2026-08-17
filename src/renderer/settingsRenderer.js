@@ -92,17 +92,39 @@ window.addEventListener('DOMContentLoaded', async () => {
     editorActiveApp = appKeys[0];
     const subKeys = Object.keys(commandSets[editorActiveApp]?.submodes || {});
     editorActiveSubmode = subKeys[0] || 'DEFAULT';
+  } else {
+    editorActiveApp = null;
+    editorActiveSubmode = null;
   }
 
   initUI();
   renderAll();
 });
 
+function renderAll() {
+  renderEditorNav();
+  renderEditorProcs();
+  renderEditorSubmodes();
+  renderEditorGroups();
+  renderVariablesManager();
+  renderViewSettings();
+}
+
 // Sync from other window updates
 if (window.feMacro.onStoreUpdated) {
   window.feMacro.onStoreUpdated(async ({ key, value }) => {
     if (key === 'commandSets') {
       commandSets = value || {};
+      const appKeys = Object.keys(commandSets);
+      if (!editorActiveApp || !commandSets[editorActiveApp]) {
+        editorActiveApp = appKeys[0] || null;
+        if (editorActiveApp && commandSets[editorActiveApp]) {
+          const subKeys = Object.keys(commandSets[editorActiveApp].submodes || {});
+          editorActiveSubmode = subKeys[0] || null;
+        } else {
+          editorActiveSubmode = null;
+        }
+      }
       renderAll();
     } else if (key === 'variables') {
       variables = value || [];
@@ -116,6 +138,7 @@ if (window.feMacro.onStoreUpdated) {
     }
   });
 }
+
 
 function initUI() {
   // Navigation tabs

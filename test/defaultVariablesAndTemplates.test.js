@@ -1,69 +1,85 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { DEFAULT_COMMAND_SETS, DEFAULT_VARIABLES, normalizeVariables } = require('../src/shared/defaultCommands.js');
+const {
+  DEFAULT_COMMAND_SETS,
+  DEFAULT_VARIABLES,
+  normalizeVariables,
+  normalizeCommandSets,
+} = require('../src/shared/defaultCommands.js');
 const { recalculateVariables } = require('../src/shared/formulaEngine.js');
 
-describe('Default Variables and Dynamic Template Substitution', () => {
-  it('contains no system locks on default variables so users can fully edit/delete', () => {
-    DEFAULT_VARIABLES.forEach((v) => {
-      assert.equal(Boolean(v.system), false, `Variable ${v.key} should not have system=true`);
-    });
+describe('Default Variables and Dynamic Template Substitution (Clean Slate)', () => {
+  it('provides an empty default state with no preloaded command sets or variables', () => {
+    assert.deepEqual(DEFAULT_COMMAND_SETS, {}, 'DEFAULT_COMMAND_SETS should be an empty object {}');
+    assert.deepEqual(DEFAULT_VARIABLES, [], 'DEFAULT_VARIABLES should be an empty array []');
   });
 
-  it('contains proper default formulas for lan_ip_1, lan_ip_2, olt, onu_idx', () => {
-    const lan1 = DEFAULT_VARIABLES.find((v) => v.key === 'lan_ip_1');
-    const lan2 = DEFAULT_VARIABLES.find((v) => v.key === 'lan_ip_2');
-    const olt = DEFAULT_VARIABLES.find((v) => v.key === 'olt');
-    const onu = DEFAULT_VARIABLES.find((v) => v.key === 'onu_idx');
+  it('normalizes null or undefined input to clean empty state', () => {
+    assert.deepEqual(normalizeVariables(null), []);
+    assert.deepEqual(normalizeVariables(undefined), []);
+    assert.deepEqual(normalizeCommandSets(null), {});
+    assert.deepEqual(normalizeCommandSets(undefined), {});
+  });
 
-    assert.ok(lan1 && lan1.formula);
-    assert.ok(lan2 && lan2.formula);
-    assert.ok(olt && olt.formula);
-    assert.ok(onu && onu.formula);
+  it('preserves user variables and computes formulas accurately', () => {
+    const userVars = [
+      { key: 'lan_ip', label: 'LAN IP', dataType: 'IP' },
+      {
+        key: 'lan_ip_1',
+        label: 'LAN IP 1',
+        dataType: 'IP',
+        formula: '{\n  array[] = lan_ip.split(".")\n  array[3] = toint(array[3]) + 1\n  lan_ip_1 = array[0] + "." + array[1] + "." + array[2] + "." + tostring(array[3])\n}',
+      },
+      {
+        key: 'lan_ip_2',
+        label: 'LAN IP 2',
+        dataType: 'IP',
+        formula: '{\n  array[] = lan_ip.split(".")\n  array[3] = toint(array[3]) + 2\n  lan_ip_2 = array[0] + "." + array[1] + "." + array[2] + "." + tostring(array[3])\n}',
+      },
+      { key: 'port', label: 'Port', dataType: 'Port' },
+      { key: 'olt', label: 'OLT', dataType: 'Port', formula: '{\n  olt = port.split(":", 0)\n}' },
+      { key: 'onu_idx', label: 'ONU Index', dataType: 'Number', formula: '{\n  onu_idx = port.split(":", 1)\n}' },
+    ];
+
+    const normalized = normalizeVariables(userVars);
+    assert.equal(normalized.length, 6);
 
     const data = {
       lan_ip: '172.17.218.17',
       port: '1/1/1:5',
     };
 
-    const res = recalculateVariables(DEFAULT_VARIABLES, data);
+    const res = recalculateVariables(normalized, data);
     assert.equal(res.values.lan_ip_1, '172.17.218.18');
     assert.equal(res.values.lan_ip_2, '172.17.218.19');
     assert.equal(res.values.olt, '1/1/1');
     assert.equal(res.values.onu_idx, '5');
   });
 
-  it('contains no hardcoded passwords or fixed IPs in command templates', () => {
-    // Check all templates in DEFAULT_COMMAND_SETS
-    const allTemplates = [];
-    Object.values(DEFAULT_COMMAND_SETS).forEach((app) => {
-      Object.values(app.submodes || {}).forEach((sub) => {
-        Object.values(sub.groups || {}).forEach((cmdList) => {
-          (cmdList || []).forEach((cmd) => {
-            allTemplates.push({ label: cmd.label, template: cmd.template });
-          });
-        });
-      });
-    });
+  it('correctly upgrades legacy tokens in user command templates', () => {
+    const userCommandSets = {
+      MY_APP: {
+        name: 'My Application',
+        submodes: {
+          DEFAULT: {
+            name: 'Default',
+            groups: {
+              Network: [
+                { label: 'Ping LAN 1', template: 'ping {lan_ip+1}\n' },
+                { label: 'Ping LAN 2', template: 'ping {lan_ip+2}\n' },
+                { label: 'Mask', template: 'mask {lan_mask}\n' },
+              ],
+            },
+          },
+        },
+      },
+    };
 
-    allTemplates.forEach(({ label, template }) => {
-      // Check no legacy tokens like :blue_full, :blue, :tab, +1, +2
-      assert.ok(!template.includes(':blue_full'), `Template '${label}' should not contain :blue_full`);
-      assert.ok(!template.includes(':blue}'), `Template '${label}' should not contain :blue`);
-      assert.ok(!template.includes('{lan_ip+1}'), `Template '${label}' should not contain {lan_ip+1}`);
-      assert.ok(!template.includes('{lan_ip+2}'), `Template '${label}' should not contain {lan_ip+2}`);
-      assert.ok(!template.includes('{lan_mask}'), `Template '${label}' should not contain {lan_mask}`);
-      assert.ok(!template.includes('{mask}'), `Template '${label}' should not contain {mask}`);
-    });
-  });
+    const normalized = normalizeCommandSets(userCommandSets);
+    const cmds = normalized.MY_APP.submodes.DEFAULT.groups.Network;
 
-  it('respects user variable deletions when normalizing stored variables', () => {
-    // User deleted 'captcha' and 'user_vlan'
-    const stored = DEFAULT_VARIABLES.filter((v) => v.key !== 'captcha' && v.key !== 'user_vlan');
-    const normalized = normalizeVariables(stored);
-
-    assert.equal(normalized.some((v) => v.key === 'captcha'), false);
-    assert.equal(normalized.some((v) => v.key === 'user_vlan'), false);
-    assert.equal(normalized.length, stored.length);
+    assert.equal(cmds[0].template, 'ping {lan_ip_1}\n');
+    assert.equal(cmds[1].template, 'ping {lan_ip_2}\n');
+    assert.equal(cmds[2].template, 'mask {subnetmask29}\n');
   });
 });
