@@ -167,24 +167,40 @@ namespace Win32Bridge {
 
         static readonly int InputSize = Marshal.SizeOf(typeof(INPUT));
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT {
+            public int X;
+            public int Y;
+        }
+
+        [DllImport("user32.dll")]
+        static extern bool GetCursorPos(out POINT lpPoint);
+
+        [DllImport("user32.dll")]
+        static extern bool SetCursorPos(int X, int Y);
+
+        [DllImport("user32.dll")]
+        static extern void mouse_event(uint dwFlags, int dx, int dy, uint dwData, UIntPtr dwExtraInfo);
+
         static void JiggleMouse(int distance) {
             if (distance <= 0) distance = 20;
 
-            INPUT inputRight = new INPUT();
-            inputRight.type = INPUT_MOUSE;
-            inputRight.mi.dx = distance;
-            inputRight.mi.dy = 0;
-            inputRight.mi.dwFlags = MOUSEEVENTF_MOVE;
-            SendInput(1, new INPUT[] { inputRight }, InputSize);
+            POINT pt;
+            if (GetCursorPos(out pt)) {
+                int origX = pt.X;
+                int origY = pt.Y;
 
-            Thread.Sleep(40);
+                // Move right by distance and trigger mouse_event so Windows registers activity
+                SetCursorPos(origX + distance, origY);
+                mouse_event(MOUSEEVENTF_MOVE, 1, 0, 0, UIntPtr.Zero);
 
-            INPUT inputLeft = new INPUT();
-            inputLeft.type = INPUT_MOUSE;
-            inputLeft.mi.dx = -distance;
-            inputLeft.mi.dy = 0;
-            inputLeft.mi.dwFlags = MOUSEEVENTF_MOVE;
-            SendInput(1, new INPUT[] { inputLeft }, InputSize);
+                Thread.Sleep(50);
+
+                // Move back to EXACT original coordinates
+                SetCursorPos(origX, origY);
+                mouse_event(MOUSEEVENTF_MOVE, -1, 0, 0, UIntPtr.Zero);
+                SetCursorPos(origX, origY);
+            }
         }
 
         static bool RobustFocusWindow(IntPtr hWnd) {

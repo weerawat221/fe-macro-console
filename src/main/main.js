@@ -884,8 +884,8 @@ function startAutoMoverLoop() {
       let userInterrupted = false;
 
       if (!isJigglingInProgress) {
-        if (movedDist > 4) {
-          // Real physical mouse movement detected
+        if (movedDist > 10) {
+          // Real physical mouse movement detected (user moved cursor > 10px)
           userInterrupted = true;
         } else if (!isAfk) {
           // During active countdown (before AFK), keyboard activity also resets the countdown
@@ -911,12 +911,13 @@ function startAutoMoverLoop() {
         if (now - lastJiggleTimestamp >= JIGGLE_INTERVAL_MS) {
           lastJiggleTimestamp = now;
           isJigglingInProgress = true;
-          const posBeforeJiggle = screen.getCursorScreenPoint();
           await win32.jiggleMouse(20);
-          lastRealUserCursorPoint = posBeforeJiggle;
+          try {
+            lastRealUserCursorPoint = screen.getCursorScreenPoint();
+          } catch { }
           setTimeout(() => {
             isJigglingInProgress = false;
-          }, 200);
+          }, 300);
         }
       }
 
