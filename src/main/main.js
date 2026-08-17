@@ -116,7 +116,7 @@ function isOurOwnWindow(info) {
         if (hInt && Number(info.hwnd) === Number(hInt)) {
           return true;
         }
-      } catch {}
+      } catch { }
     }
   }
 
@@ -847,24 +847,69 @@ const JIGGLE_INTERVAL_MS = 5000; // Jiggle mouse every 5 seconds when idle >= 18
 
 let autoMoverActive = false;
 let autoMoverInterval = null;
+let lastRealUserActivityTime = Date.now();
+let lastRealUserCursorPoint = { x: 0, y: 0 };
 let lastJiggleTimestamp = 0;
+let isJigglingInProgress = false;
 
 function startAutoMoverLoop() {
   if (autoMoverInterval) clearInterval(autoMoverInterval);
+
+  lastRealUserActivityTime = Date.now();
+  try {
+    lastRealUserCursorPoint = screen.getCursorScreenPoint();
+  } catch {
+    lastRealUserCursorPoint = { x: 0, y: 0 };
+  }
+  lastJiggleTimestamp = 0;
+  isJigglingInProgress = false;
 
   autoMoverInterval = setInterval(async () => {
     if (!autoMoverActive) return;
 
     try {
-      const idleMs = await win32.getIdleTime();
-      const isAfk = idleMs >= IDLE_THRESHOLD_MS;
-      const remainingSec = Math.max(0, Math.ceil((IDLE_THRESHOLD_MS - idleMs) / 1000));
+      let currentCursor = { x: 0, y: 0 };
+      try {
+        currentCursor = screen.getCursorScreenPoint();
+      } catch {}
+
+      // If user physically moved the mouse cursor to a new spot (while we were not mid-jiggle):
+      if (!isJigglingInProgress) {
+        const movedDist = Math.hypot(
+          currentCursor.x - lastRealUserCursorPoint.x,
+          currentCursor.y - lastRealUserCursorPoint.y
+        );
+        if (movedDist > 2) {
+          lastRealUserActivityTime = Date.now();
+          lastRealUserCursorPoint = currentCursor;
+        } else {
+          // Check if user typed on the keyboard (Win32 getIdleTime < 1000ms and no jiggle in last 1.5s)
+          const timeSinceLastJiggle = Date.now() - lastJiggleTimestamp;
+          if (timeSinceLastJiggle > 1500) {
+            const rawIdleMs = await win32.getIdleTime();
+            if (rawIdleMs < 1000) {
+              lastRealUserActivityTime = Date.now();
+              lastRealUserCursorPoint = currentCursor;
+            }
+          }
+        }
+      }
+
+      const elapsedIdle = Date.now() - lastRealUserActivityTime;
+      const isAfk = elapsedIdle >= IDLE_THRESHOLD_MS;
+      const remainingSec = Math.max(0, Math.ceil((IDLE_THRESHOLD_MS - elapsedIdle) / 1000));
 
       if (isAfk) {
         const now = Date.now();
         if (now - lastJiggleTimestamp >= JIGGLE_INTERVAL_MS) {
           lastJiggleTimestamp = now;
+          isJigglingInProgress = true;
+          const posBeforeJiggle = screen.getCursorScreenPoint();
           await win32.jiggleMouse(20);
+          lastRealUserCursorPoint = posBeforeJiggle;
+          setTimeout(() => {
+            isJigglingInProgress = false;
+          }, 120);
         }
       }
 
@@ -873,7 +918,7 @@ function startAutoMoverLoop() {
           enabled: true,
           remainingSec,
           isJiggling: isAfk,
-          idleMs,
+          idleMs: elapsedIdle,
         });
       }
     } catch (err) {
@@ -887,6 +932,7 @@ function stopAutoMoverLoop() {
     clearInterval(autoMoverInterval);
     autoMoverInterval = null;
   }
+  isJigglingInProgress = false;
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('autoMover:tick', {
       enabled: false,
