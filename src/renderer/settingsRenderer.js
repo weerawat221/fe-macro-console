@@ -1204,8 +1204,12 @@ function initAddProcModal() {
 }
 
 async function openAddProcModal() {
+  if (!editorActiveApp || !commandSets[editorActiveApp]) {
+    showToast('Please create or select a Command Set first');
+    openNewSetModal();
+    return;
+  }
   const app = commandSets[editorActiveApp];
-  if (!app) return;
 
   const select = document.getElementById('addProcSelect');
   select.innerHTML = '<option value="">-- Loading running applications… --</option>';
@@ -1336,6 +1340,11 @@ function initNewSubmodeModal() {
 }
 
 function openNewSubmodeModal() {
+  if (!editorActiveApp || !commandSets[editorActiveApp]) {
+    showToast('Please create or select a Command Set first');
+    openNewSetModal();
+    return;
+  }
   const input = document.getElementById('nsubName');
   input.value = '';
   document.getElementById('newSubmodeModal').classList.remove('modal-overlay--hidden');
@@ -1448,11 +1457,49 @@ function renderEditorGroups() {
   if (!container) return;
   container.innerHTML = '';
 
+  const procsBar = document.getElementById('editorProcsBar');
+  const submodeBar = document.getElementById('editorSubmodeBar');
+  const headerBar = document.querySelector('.editor-main-header');
+
   const appKey = editorActiveApp;
   const app = commandSets[appKey];
-  if (!app || !app.submodes) return;
+  if (!app || !app.submodes) {
+    if (procsBar) procsBar.style.display = 'none';
+    if (submodeBar) submodeBar.style.display = 'none';
+    if (headerBar) headerBar.style.display = 'none';
 
-  const subKey = editorActiveSubmode || Object.keys(app.submodes)[0];
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.style.cssText = 'padding: 60px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;';
+    empty.innerHTML = `
+      <i class="fa-solid fa-layer-group" style="font-size: 38px; color: var(--text-dim); margin-bottom: 4px;"></i>
+      <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">No Command Sets Configured</h3>
+      <p style="font-size: 11.5px; color: var(--text-muted); max-width: 380px; margin: 0; line-height: 1.5;">
+        Get started by creating your first command set for your programs (e.g. Remote Desktop, PuTTY, LINE, CMD), or import an existing settings file.
+      </p>
+      <div style="display: flex; gap: 10px; margin-top: 8px;">
+        <button class="btn btn--primary" id="btnEmptyCreateSet"><i class="fa-solid fa-plus"></i> Create First Command Set</button>
+        <button class="btn btn--ghost" id="btnEmptyImportSet"><i class="fa-solid fa-arrow-down-to-line"></i> Import Settings</button>
+      </div>
+    `;
+
+    empty.querySelector('#btnEmptyCreateSet')?.addEventListener('click', openNewSetModal);
+    empty.querySelector('#btnEmptyImportSet')?.addEventListener('click', handleImportConfig);
+
+    container.appendChild(empty);
+    return;
+  }
+
+  if (procsBar) procsBar.style.display = 'flex';
+  if (submodeBar) submodeBar.style.display = 'flex';
+  if (headerBar) headerBar.style.display = 'flex';
+
+  const subKeys = Object.keys(app.submodes);
+  if (!editorActiveSubmode || !app.submodes[editorActiveSubmode]) {
+    editorActiveSubmode = subKeys[0] || 'DEFAULT';
+  }
+
+  const subKey = editorActiveSubmode;
   const subObj = app.submodes[subKey];
   if (!subObj) return;
 
@@ -1616,9 +1663,13 @@ function renderEditorGroups() {
 }
 
 function addNewGroup() {
+  if (!editorActiveApp || !commandSets[editorActiveApp]) {
+    showToast('Please create or select a Command Set first');
+    openNewSetModal();
+    return;
+  }
   const appKey = editorActiveApp;
   const app = commandSets[appKey];
-  if (!app) return;
 
   const subKey = editorActiveSubmode || Object.keys(app.submodes)[0];
   const subObj = app.submodes[subKey];
