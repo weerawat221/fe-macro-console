@@ -122,8 +122,8 @@ namespace Win32Bridge {
         const uint MOUSEEVENTF_MOVE = 0x0001;
         const uint KEYEVENTF_KEYUP = 0x0002;
         const uint KEYEVENTF_UNICODE = 0x0004;
-        const byte VK_MENU = 0x12;
         const ushort VK_SHIFT = 0x10;
+        const byte VK_MENU = 0x12;
         const ushort VK_RETURN = 0x0D;
         const ushort VK_TAB = 0x09;
         const int ASFW_ANY = -1;
@@ -267,72 +267,7 @@ namespace Win32Bridge {
             for (int i = 0; i < text.Length; i++) {
                 char c = text[i];
 
-                // Handle \d:ms (delay in milliseconds e.g. \d:1000 or \d:500)
-                if (c == '\\' && i + 2 < text.Length && (text[i + 1] == 'd' || text[i + 1] == 'D') && text[i + 2] == ':') {
-                    int j = i + 3;
-                    int delayMs = 0;
-                    while (j < text.Length && char.IsDigit(text[j])) {
-                        delayMs = delayMs * 10 + (text[j] - '0');
-                        j++;
-                    }
-                    if (j > i + 3) {
-                        // Flush existing Unicode batch before delay
-                        if (batch.Count > 0) {
-                            SendInput((uint)batch.Count, batch.ToArray(), InputSize);
-                            batch.Clear();
-                        }
-                        if (delayMs > 0) {
-                            Thread.Sleep(Math.Min(delayMs, 120000));
-                        }
-                        i = j - 1;
-                        continue;
-                    }
-                }
-
-                // Handle \sn (Shift+Enter)
-                if (c == '\\' && i + 2 < text.Length && (text[i + 1] == 's' || text[i + 1] == 'S') && (text[i + 2] == 'n' || text[i + 2] == 'N')) {
-                    // Flush existing Unicode batch
-                    if (batch.Count > 0) {
-                        SendInput((uint)batch.Count, batch.ToArray(), InputSize);
-                        batch.Clear();
-                        Thread.Sleep(20);
-                    }
-
-                    // Send Shift+Enter
-                    INPUT[] shiftEnter = new INPUT[4];
-
-                    // Shift Down
-                    shiftEnter[0].type = INPUT_KEYBOARD;
-                    shiftEnter[0].ki.wVk = VK_SHIFT;
-                    shiftEnter[0].ki.wScan = (ushort)MapVirtualKey(VK_SHIFT, 0);
-                    shiftEnter[0].ki.dwFlags = 0;
-
-                    // Enter Down
-                    shiftEnter[1].type = INPUT_KEYBOARD;
-                    shiftEnter[1].ki.wVk = VK_RETURN;
-                    shiftEnter[1].ki.wScan = (ushort)MapVirtualKey(VK_RETURN, 0);
-                    shiftEnter[1].ki.dwFlags = 0;
-
-                    // Enter Up
-                    shiftEnter[2].type = INPUT_KEYBOARD;
-                    shiftEnter[2].ki.wVk = VK_RETURN;
-                    shiftEnter[2].ki.wScan = (ushort)MapVirtualKey(VK_RETURN, 0);
-                    shiftEnter[2].ki.dwFlags = KEYEVENTF_KEYUP;
-
-                    // Shift Up
-                    shiftEnter[3].type = INPUT_KEYBOARD;
-                    shiftEnter[3].ki.wVk = VK_SHIFT;
-                    shiftEnter[3].ki.wScan = (ushort)MapVirtualKey(VK_SHIFT, 0);
-                    shiftEnter[3].ki.dwFlags = KEYEVENTF_KEYUP;
-
-                    SendInput(4, shiftEnter, InputSize);
-                    Thread.Sleep(35);
-
-                    i += 2;
-                    continue;
-                }
-
-                // Handle literal backslash escape sequences (\n, \t, \r, \\)
+                // Handle literal backslash escape sequences (\n, \t, \r, \sn, \d:ms, \\)
                 if (c == '\\' && i + 1 < text.Length) {
                     char next = text[i + 1];
                     if (next == 'n' || next == 'N') {
@@ -346,6 +281,61 @@ namespace Win32Bridge {
                     else if (next == 'r' || next == 'R') {
                         i++;
                         continue;
+                    }
+                    else if ((next == 's' || next == 'S') && i + 2 < text.Length && (text[i + 2] == 'n' || text[i + 2] == 'N')) {
+                        // \sn or \SN = Shift + Enter
+                        i += 2;
+                        if (batch.Count > 0) {
+                            SendInput((uint)batch.Count, batch.ToArray(), InputSize);
+                            batch.Clear();
+                            Thread.Sleep(20);
+                        }
+
+                        INPUT[] shiftEnter = new INPUT[4];
+                        shiftEnter[0].type = INPUT_KEYBOARD;
+                        shiftEnter[0].ki.wVk = VK_SHIFT;
+                        shiftEnter[0].ki.wScan = (ushort)MapVirtualKey(VK_SHIFT, 0);
+                        shiftEnter[0].ki.dwFlags = 0;
+
+                        shiftEnter[1].type = INPUT_KEYBOARD;
+                        shiftEnter[1].ki.wVk = VK_RETURN;
+                        shiftEnter[1].ki.wScan = (ushort)MapVirtualKey(VK_RETURN, 0);
+                        shiftEnter[1].ki.dwFlags = 0;
+
+                        shiftEnter[2].type = INPUT_KEYBOARD;
+                        shiftEnter[2].ki.wVk = VK_RETURN;
+                        shiftEnter[2].ki.wScan = (ushort)MapVirtualKey(VK_RETURN, 0);
+                        shiftEnter[2].ki.dwFlags = KEYEVENTF_KEYUP;
+
+                        shiftEnter[3].type = INPUT_KEYBOARD;
+                        shiftEnter[3].ki.wVk = VK_SHIFT;
+                        shiftEnter[3].ki.wScan = (ushort)MapVirtualKey(VK_SHIFT, 0);
+                        shiftEnter[3].ki.dwFlags = KEYEVENTF_KEYUP;
+
+                        SendInput(4, shiftEnter, InputSize);
+                        Thread.Sleep(35);
+                        continue;
+                    }
+                    else if ((next == 'd' || next == 'D') && i + 2 < text.Length && text[i + 2] == ':') {
+                        // \d:1000 = Delay ms
+                        int startDigits = i + 3;
+                        int endDigits = startDigits;
+                        while (endDigits < text.Length && char.IsDigit(text[endDigits])) {
+                            endDigits++;
+                        }
+                        if (endDigits > startDigits) {
+                            string numStr = text.Substring(startDigits, endDigits - startDigits);
+                            int delayMs = 0;
+                            if (int.TryParse(numStr, out delayMs) && delayMs > 0) {
+                                if (batch.Count > 0) {
+                                    SendInput((uint)batch.Count, batch.ToArray(), InputSize);
+                                    batch.Clear();
+                                }
+                                Thread.Sleep(delayMs);
+                                i = endDigits - 1;
+                                continue;
+                            }
+                        }
                     }
                     else if (next == '\\') {
                         i++;

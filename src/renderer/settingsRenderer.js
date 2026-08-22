@@ -13,8 +13,6 @@ import {
   hexToRgb,
   rgbToHex,
   generateCustomThemeObject,
-  applyI18nToDOM,
-  t,
 } from './theme.js';
 import { hashPassword, verifyPassword, encryptPayload, decryptPayload } from './crypto.js';
 import {
@@ -72,7 +70,6 @@ function showToast(msg, duration = 3000) {
 }
 
 function renderAll() {
-  applyI18nToDOM(document, viewConfig.language || 'th');
   switchTab(activeNavTab);
 }
 
@@ -361,20 +358,6 @@ function initViewSettings() {
   const selFontFamily = document.getElementById('selFontFamily');
   const selDensity = document.getElementById('selDensity');
 
-  const btnLangTh = document.getElementById('btnLangTh');
-  const btnLangEn = document.getElementById('btnLangEn');
-
-  async function switchLanguage(lang) {
-    viewConfig.language = lang;
-    applyViewConfig(viewConfig);
-    await persistViewConfig();
-    renderViewSettings();
-    renderAll();
-  }
-
-  btnLangTh?.addEventListener('click', () => switchLanguage('th'));
-  btnLangEn?.addEventListener('click', () => switchLanguage('en'));
-
   sliderCmdFont?.addEventListener('input', (e) => {
     const val = e.target.value;
     if (valCmdFont) valCmdFont.textContent = `${val}px`;
@@ -407,25 +390,6 @@ function initViewSettings() {
 }
 
 function renderViewSettings() {
-  // Update Language Switcher Buttons state
-  const curLang = viewConfig.language || 'th';
-  const btnLangTh = document.getElementById('btnLangTh');
-  const btnLangEn = document.getElementById('btnLangEn');
-
-  if (btnLangTh && btnLangEn) {
-    if (curLang === 'th') {
-      btnLangTh.classList.remove('btn--secondary');
-      btnLangTh.classList.add('btn--primary');
-      btnLangEn.classList.remove('btn--primary');
-      btnLangEn.classList.add('btn--secondary');
-    } else {
-      btnLangEn.classList.remove('btn--secondary');
-      btnLangEn.classList.add('btn--primary');
-      btnLangTh.classList.remove('btn--primary');
-      btnLangTh.classList.add('btn--secondary');
-    }
-  }
-
   // Theme Presets Grid
   const grid = document.getElementById('themePresetGrid');
   if (!grid) return;

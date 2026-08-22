@@ -25,20 +25,20 @@
       <div class="header-row">
         <div class="focus-indicator">
           <span id="focusDot" class="focus-dot focus-dot--idle"></span>
-          <span id="focusLabel" class="focus-label" data-i18n="focus_no_target">Waiting for target window…</span>
+          <span id="focusLabel" class="focus-label">Waiting for target window…</span>
         </div>
         <div class="header-actions">
-          <button id="btnAutoMover" class="btn btn--ghost btn--sm" title="Toggle Auto-Mover (keeps PC awake when idle)" data-i18n-title="btn_auto_mover_title">
+          <button id="btnAutoMover" class="btn btn--ghost btn--sm" title="Toggle Auto-Mover (keeps PC awake when idle)">
             <span class="focus-dot focus-dot--idle" id="autoMoverDot"></span>
-            <span id="autoMoverLabel" data-i18n="status_idle">IDLE</span>
+            <span id="autoMoverLabel">IDLE</span>
             <span id="autoMoverTimer" style="font-size:9px;color:var(--text-dim);margin-left:2px;"></span>
           </button>
-          <button id="btnOcrCapture" class="btn btn--ghost btn--icon" title="Auto Variable Input OCR (Alt+Shift+S)" data-i18n-title="btn_ocr_capture">
+          <button id="btnOcrCapture" class="btn btn--ghost btn--icon" title="Auto Variable Input OCR (Alt+Shift+S)">
             <i class="fa-solid fa-crop-simple"></i>
           </button>
-          <button id="btnEditMode" class="btn btn--ghost btn--sm" title="Open Settings" data-i18n-title="btn_setting"><i class="fa-solid fa-gear"></i> <span data-i18n="settings_title">Setting</span></button>
-          <button id="btnToggleFieldFilter" class="btn btn--ghost btn--sm" title="Toggle: Show All Fields vs Used Only" data-i18n-title="btn_filter_fields"><i class="fa-solid fa-filter"></i> <span id="toggleFilterText">USED</span></button>
-          <button id="btnClearInputs" class="btn btn--danger-ghost btn--icon" title="Clear all fields in current tab" data-i18n-title="btn_clear_fields"><i class="fa-solid fa-trash-can"></i></button>
+          <button id="btnEditMode" class="btn btn--ghost btn--sm" title="Open Settings"><i class="fa-solid fa-gear"></i> Setting</button>
+          <button id="btnToggleFieldFilter" class="btn btn--ghost btn--sm" title="Toggle: Show All Fields vs Used Only"><i class="fa-solid fa-filter"></i> <span id="toggleFilterText">USED</span></button>
+          <button id="btnClearInputs" class="btn btn--danger-ghost btn--icon" title="Clear all fields in current tab"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </div>
       <div id="errorBanner" class="error-banner" role="alert"></div>
@@ -59,12 +59,12 @@
   <div id="confirmModal" class="modal-overlay modal-overlay--hidden">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
       <div class="modal-header">
-        <h2 id="confirmModalTitle" data-i18n="review_title">Review command</h2>
+        <h2 id="confirmModalTitle">Review command</h2>
       </div>
       <pre id="confirmModalBody" class="modal-body-pre"></pre>
       <div class="modal-footer">
-        <button id="confirmCancel" class="btn btn--ghost" data-i18n="review_cancel">Cancel</button>
-        <button id="confirmSend" class="btn btn--primary" data-i18n="review_confirm_send">Confirm &amp; send</button>
+        <button id="confirmCancel" class="btn btn--ghost">Cancel</button>
+        <button id="confirmSend" class="btn btn--primary">Confirm &amp; send</button>
       </div>
     </div>
   </div>
@@ -270,7 +270,7 @@
         <input id="cfLabel" class="form-input" placeholder="e.g. Check AP Status" />
 
         <label class="form-label" for="cfTemplate">Command template</label>
-        <textarea id="cfTemplate" class="form-textarea" rows="6" placeholder="display ap all | include {sr_ap}&#10;Use \n for Enter, \t for Tab. Wrap field names in { }."></textarea>
+        <textarea id="cfTemplate" class="form-textarea" rows="6" placeholder="display ap all | include {sr_ap}&#10;Use \n (Enter), \sn (Shift+Enter), \t (Tab), \d:ms (e.g. \d:1000 for 1s delay). Wrap variables in { }."></textarea>
 
         <div class="form-token-hint" id="cfTokenHint"></div>
 
