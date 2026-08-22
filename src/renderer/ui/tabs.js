@@ -7,6 +7,7 @@ import { showError } from './errorBanner.js';
 import { renderFieldPanel } from './fieldPanel.js';
 import { renderCommandPanel } from './commandPanel.js';
 import { recalculateVariables } from '../../shared/formulaEngine.js';
+import { t } from '../../shared/i18n.js';
 
 let persistTimer = null;
 

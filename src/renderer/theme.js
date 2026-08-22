@@ -2,6 +2,9 @@
 // Theme, typography, and font size configuration manager.
 // Supports built-in themes and user-created custom themes with full Color Wheel and RGB controls.
 
+import { applyI18nToDOM, setLanguage, getLanguage, t } from '../shared/i18n.js';
+export { applyI18nToDOM, setLanguage, getLanguage, t };
+
 export const BUILTIN_THEMES = {
   dark_void: {
     name: 'Dark Void (Default)',
@@ -141,6 +144,7 @@ export const DEFAULT_VIEW_CONFIG = {
   inputFontSize: '11px',
   fontFamily: "'JetBrains Mono', 'Consolas', monospace",
   density: 'normal', // 'compact' | 'normal' | 'comfortable'
+  language: 'th', // 'th' | 'en'
 };
 
 export async function loadAndApplyViewConfig() {
@@ -206,6 +210,11 @@ export function applyViewConfig(config) {
     root.style.setProperty('--cmd-gap-y', '3px');
     root.style.setProperty('--panel-padding', '10px 12px');
   }
+
+  // Apply Language / Internationalization
+  const lang = config.language || 'th';
+  setLanguage(lang);
+  applyI18nToDOM(document, lang);
 }
 
 // Color conversion helpers

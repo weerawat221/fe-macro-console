@@ -28,14 +28,14 @@
     <!-- Floating Top Bar -->
     <header class="ocr-top-bar" id="topBar">
       <div class="ocr-top-left">
-        <span class="ocr-pill-badge">OCR AUTO-INPUT</span>
-        <span id="statusText" class="ocr-status-text">Drag a box over text on screen (ESC to cancel)</span>
+        <span class="ocr-pill-badge" data-i18n="ocr_title">OCR AUTO-INPUT</span>
+        <span id="statusText" class="ocr-status-text" data-i18n="ocr_hint">Drag a box over text on screen (ESC to cancel)</span>
       </div>
       <div class="ocr-top-right">
         <button id="btnQuickRecall" class="btn btn--recall" style="display:none;" title="Re-apply last saved capture positions (Space)">
           <i class="fa-solid fa-bolt"></i> Auto-Fill Last Position
         </button>
-        <button id="btnCancelTop" class="btn btn--ghost btn--icon" title="Cancel (Esc)"><i class="fa-solid fa-xmark"></i></button>
+        <button id="btnCancelTop" class="btn btn--ghost btn--icon" title="Cancel (Esc)" data-i18n-title="ocr_close"><i class="fa-solid fa-xmark"></i></button>
       </div>
     </header>
 
@@ -61,9 +61,9 @@
         </label>
       </div>
       <div class="ocr-bottom-right">
-        <button id="btnCancelBottom" class="btn btn--ghost btn--sm">Cancel (Esc)</button>
+        <button id="btnCancelBottom" class="btn btn--ghost btn--sm" data-i18n="review_cancel">Cancel (Esc)</button>
         <button id="btnApplyValues" class="btn btn--primary btn--sm" disabled>
-          <i class="fa-solid fa-check"></i> Apply to Macro (0)
+          <i class="fa-solid fa-check"></i> <span data-i18n="ocr_apply_btn">Apply to Macro</span>
         </button>
       </div>
     </footer>

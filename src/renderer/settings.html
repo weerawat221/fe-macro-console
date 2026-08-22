@@ -16,21 +16,21 @@
     <!-- ============ SETTINGS HEADER ============ -->
     <header class="settings-header">
       <div class="editor-header-left">
-        <h1 class="settings-window-title">Setting</h1>
+        <h1 class="settings-window-title" data-i18n="settings_title">Setting</h1>
         <!-- Top navbar: Command Sets vs Variables vs View -->
         <nav class="editor-top-nav" role="tablist">
-          <button id="tabNavApps" class="editor-top-tab editor-top-tab--active" role="tab" aria-selected="true"><i class="fa-solid fa-layer-group"></i> Command Sets (Apps)</button>
-          <button id="tabNavVariables" class="editor-top-tab" role="tab" aria-selected="false"><i class="fa-solid fa-code"></i> Variables</button>
-          <button id="tabNavView" class="editor-top-tab" role="tab" aria-selected="false"><i class="fa-solid fa-palette"></i> View</button>
+          <button id="tabNavApps" class="editor-top-tab editor-top-tab--active" role="tab" aria-selected="true"><i class="fa-solid fa-layer-group"></i> <span data-i18n="tab_apps">Command Sets (Apps)</span></button>
+          <button id="tabNavVariables" class="editor-top-tab" role="tab" aria-selected="false"><i class="fa-solid fa-code"></i> <span data-i18n="tab_variables">Variables</span></button>
+          <button id="tabNavView" class="editor-top-tab" role="tab" aria-selected="false"><i class="fa-solid fa-palette"></i> <span data-i18n="tab_view">View</span></button>
         </nav>
       </div>
       <div class="editor-header-right">
         <!-- Export: arrow-up-to-line -->
-        <button id="btnExportConfig" class="btn btn--ghost btn--icon" title="Export All Settings">
+        <button id="btnExportConfig" class="btn btn--ghost btn--icon" title="Export All Settings" data-i18n-title="btn_export">
           <i class="fa-solid fa-arrow-up-to-line"></i>
         </button>
         <!-- Import: arrow-down-to-line -->
-        <button id="btnImportConfig" class="btn btn--ghost btn--icon" title="Import Settings">
+        <button id="btnImportConfig" class="btn btn--ghost btn--icon" title="Import Settings" data-i18n-title="btn_import">
           <i class="fa-regular fa-arrow-down-to-line"></i>
         </button>
       </div>
@@ -45,31 +45,31 @@
       <!-- PAGE 1: COMMAND SETS (APPS) -->
       <div id="editorViewApps" class="editor-body">
         <nav class="editor-nav">
-          <div class="editor-nav-label">Command sets (Apps)</div>
+          <div class="editor-nav-label" data-i18n="set_header">Command sets (Apps)</div>
           <div id="editorModeList" class="editor-mode-list"></div>
-          <button id="btnAddMode" class="btn btn--ghost btn--sm editor-add-mode"><i class="fa-solid fa-plus"></i> New set</button>
+          <button id="btnAddMode" class="btn btn--ghost btn--sm editor-add-mode"><i class="fa-solid fa-plus"></i> <span data-i18n="set_new_btn">New set</span></button>
         </nav>
 
         <div class="editor-main">
           <!-- Target Programs / Processes Bar -->
           <div class="editor-procs-bar" id="editorProcsBar">
-            <div class="editor-procs-label">Programs:</div>
+            <div class="editor-procs-label" data-i18n="set_programs_label">Programs:</div>
             <div class="editor-procs-list" id="editorProcsList"></div>
             <button id="btnAddProcToSet" class="btn btn--ghost btn--xs"
-              title="Add running program to this command set"><i class="fa-solid fa-plus"></i> Add Program</button>
+              title="Add running program to this command set" data-i18n-title="set_add_program"><i class="fa-solid fa-plus"></i> <span data-i18n="set_add_program">Add Program</span></button>
           </div>
 
           <!-- Submode bar in editor -->
           <div class="editor-submode-bar" id="editorSubmodeBar">
-            <div class="editor-submode-label">Sub-modes:</div>
+            <div class="editor-submode-label" data-i18n="set_submodes_label">Sub-modes:</div>
             <div class="editor-submode-list" id="editorSubmodeList"></div>
-            <button id="btnAddSubmode" class="btn btn--ghost btn--xs" title="Add sub-macro set"><i class="fa-solid fa-plus"></i> Sub-mode</button>
+            <button id="btnAddSubmode" class="btn btn--ghost btn--xs" title="Add sub-macro set" data-i18n-title="set_add_submode"><i class="fa-solid fa-plus"></i> <span data-i18n="set_add_submode">Sub-mode</span></button>
           </div>
 
           <div class="editor-main-header">
             <input id="editorGroupTitle" class="editor-group-title-input"
-              placeholder="Group name (e.g. AP Monitoring)" />
-            <button id="btnAddGroup" class="btn btn--ghost btn--sm"><i class="fa-solid fa-folder-plus"></i> Group</button>
+              placeholder="Group name (e.g. AP Monitoring)" data-i18n-ph="set_group_ph" />
+            <button id="btnAddGroup" class="btn btn--ghost btn--sm"><i class="fa-solid fa-folder-plus"></i> <span data-i18n="set_add_group">Group</span></button>
           </div>
           <div id="editorGroups" class="editor-groups"></div>
         </div>
@@ -79,19 +79,19 @@
       <div id="editorViewVariables" class="editor-body editor-body--column" style="display:none;">
         <div class="var-manager-header">
           <div class="var-manager-info">
-            <span class="var-manager-title">Variables &amp; Tokens</span>
-            <span class="var-manager-desc">Manage all variable tokens used for text input fields and macro command
+            <span class="var-manager-title" data-i18n="var_manager_title">Variables &amp; Tokens</span>
+            <span class="var-manager-desc" data-i18n="var_manager_desc">Manage all variable tokens used for text input fields and macro command
               templates.</span>
           </div>
           <div class="var-manager-actions">
             <div class="var-search-wrap">
               <i class="fa-solid fa-magnifying-glass var-search-icon"></i>
-              <input id="varSearchInput" class="form-input var-search-input" placeholder="Search variables…" autocomplete="off" />
+              <input id="varSearchInput" class="form-input var-search-input" placeholder="Search variables…" data-i18n-ph="var_search_ph" autocomplete="off" />
               <button id="varSearchClear" class="var-search-clear-btn" title="Clear search" type="button" style="display:none;">
                 <i class="fa-solid fa-xmark"></i>
               </button>
             </div>
-            <button id="btnAddVariable" class="btn btn--primary btn--sm"><i class="fa-solid fa-plus"></i> Add Variable</button>
+            <button id="btnAddVariable" class="btn btn--primary btn--sm"><i class="fa-solid fa-plus"></i> <span data-i18n="var_add_btn">Add Variable</span></button>
           </div>
         </div>
         <div class="var-list-container" id="varListContainer"></div>
@@ -101,14 +101,32 @@
       <div id="editorViewTheme" class="editor-body editor-body--column" style="display:none;">
         <div class="view-settings-container">
 
+          <!-- System Language -->
+          <div class="view-section">
+            <div class="view-section-header view-section-header--split">
+              <div class="view-section-header-info">
+                <span class="view-section-title" data-i18n="view_language_title">System Language</span>
+                <span class="view-section-desc" data-i18n="view_language_desc">Select language for application interface (Thai / English).</span>
+              </div>
+              <div class="language-switch-btn-group" style="display:flex;gap:8px;align-items:center;">
+                <button id="btnLangTh" class="btn btn--secondary btn--sm language-toggle-btn" data-lang="th" title="ภาษาไทย">
+                  <i class="fa-solid fa-language"></i> ภาษาไทย (TH)
+                </button>
+                <button id="btnLangEn" class="btn btn--secondary btn--sm language-toggle-btn" data-lang="en" title="English">
+                  <i class="fa-solid fa-language"></i> English (EN)
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Theme Presets -->
           <div class="view-section">
             <div class="view-section-header view-section-header--split">
               <div class="view-section-header-info">
-                <span class="view-section-title">Color Theme Preset</span>
-                <span class="view-section-desc">Select a visual theme for the macro console and setting window.</span>
+                <span class="view-section-title" data-i18n="view_theme_title">Color Theme Preset</span>
+                <span class="view-section-desc" data-i18n="view_theme_desc">Select a visual theme for the macro console and setting window.</span>
               </div>
-              <button id="btnAddCustomTheme" class="btn btn--primary btn--xs" title="Create Custom Theme"><i class="fa-solid fa-plus"></i> Add Theme</button>
+              <button id="btnAddCustomTheme" class="btn btn--primary btn--xs" title="Create Custom Theme"><i class="fa-solid fa-plus"></i> <span data-i18n="view_add_theme_btn">Add Theme</span></button>
             </div>
             <div class="theme-preset-grid" id="themePresetGrid"></div>
           </div>
@@ -116,8 +134,8 @@
           <!-- Typography & Font Sizes -->
           <div class="view-section">
             <div class="view-section-header">
-              <span class="view-section-title">Font Size &amp; Typography</span>
-              <span class="view-section-desc">Customize text size and monospace fonts for buttons and inputs.</span>
+              <span class="view-section-title" data-i18n="view_typography_title">Font Size &amp; Typography</span>
+              <span class="view-section-desc" data-i18n="view_typography_desc">Customize text size and monospace fonts for buttons and inputs.</span>
             </div>
             <div class="typography-grid">
 

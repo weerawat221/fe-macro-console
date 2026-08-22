@@ -3,6 +3,7 @@
 // Used by both Main Console and Settings window to protect Hidden Variables.
 
 import { hashPassword, verifyPassword } from './crypto.js';
+import { t } from '../shared/i18n.js';
 
 let adminAuthCallback = null;
 let adminIsSetup = false;
@@ -46,19 +47,37 @@ export async function requireAdminPassword(actionLabel, callback) {
   const msgEl = document.getElementById('adminPwMessage');
   const setupNote = document.getElementById('adminPwSetupNote');
   const titleEl = document.getElementById('adminPwTitle');
-  if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-shield-halved" style="color:var(--signal);margin-right:6px;"></i> ${actionLabel}`;
+  const confirmBtn = document.getElementById('adminPwConfirmBtn');
+  const cancelBtn = document.getElementById('adminPwCancel');
+
+  if (titleEl) {
+    titleEl.innerHTML = `<i class="fa-solid fa-shield-halved" style="color:var(--signal);margin-right:6px;"></i> ${actionLabel || t('admin_auth_title')}`;
+  }
   if (msgEl) {
     msgEl.textContent = adminIsSetup
-      ? 'Enter admin password to continue.'
-      : 'No admin password set yet. Create one now.';
+      ? t('admin_auth_input_label')
+      : t('admin_auth_set_title');
   }
   if (setupNote) setupNote.style.display = adminIsSetup ? 'none' : 'block';
+  if (confirmBtn) {
+    confirmBtn.textContent = adminIsSetup ? t('admin_auth_unlock_btn') : t('admin_auth_save_btn');
+  }
+  if (cancelBtn) {
+    cancelBtn.textContent = t('common_cancel');
+  }
+
   const pwInput = document.getElementById('adminPwInput');
-  if (pwInput) pwInput.value = '';
+  if (pwInput) {
+    pwInput.value = '';
+    pwInput.placeholder = t('admin_auth_input_ph');
+  }
   const errEl = document.getElementById('adminPwError');
   if (errEl) errEl.style.display = 'none';
   const confirmInput = document.getElementById('adminPwConfirm');
-  if (confirmInput) confirmInput.value = '';
+  if (confirmInput) {
+    confirmInput.value = '';
+    confirmInput.placeholder = t('admin_auth_confirm_ph');
+  }
 
   document.getElementById('adminPasswordModal')?.classList.remove('modal-overlay--hidden');
   setTimeout(() => pwInput?.focus(), 50);
@@ -72,7 +91,7 @@ async function confirmAdminPassword() {
   // Validate: alphanumeric only, 6+ chars
   if (!/^[a-zA-Z0-9]{6,}$/.test(password)) {
     if (errEl) {
-      errEl.textContent = 'Password must be at least 6 alphanumeric characters.';
+      errEl.textContent = t('admin_auth_err_short');
       errEl.style.display = 'block';
     }
     return;
@@ -85,7 +104,7 @@ async function confirmAdminPassword() {
     const confirm = document.getElementById('adminPwConfirm')?.value;
     if (password !== confirm) {
       if (errEl) {
-        errEl.textContent = 'Passwords do not match.';
+        errEl.textContent = t('admin_auth_err_mismatch');
         errEl.style.display = 'block';
       }
       return;

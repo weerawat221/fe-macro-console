@@ -4,6 +4,7 @@
 
 import { state, getActiveAppSubmode } from '../state.js';
 import { runCommand } from '../commandRunner.js';
+import { t } from '../../shared/i18n.js';
 
 export function renderCommandPanel() {
   const panel = document.getElementById('commandPanel');
@@ -11,7 +12,7 @@ export function renderCommandPanel() {
 
   const appKeys = Object.keys(state.commandSets);
   if (appKeys.length === 0) {
-    drawEmptyState(panel, 'No command sets configured. Click Setting to add a command set.');
+    drawEmptyState(panel, t('set_empty_title') + '. ' + t('set_empty_desc'));
     return;
   }
 
@@ -19,7 +20,7 @@ export function renderCommandPanel() {
   const app = state.commandSets[activeAppKey];
 
   if (!app || !app.submodes) {
-    drawEmptyState(panel, `No commands configured for ${activeAppKey}. Click Setting to add commands.`);
+    drawEmptyState(panel, `${t('cmd_no_commands')} (${activeAppKey})`);
     return;
   }
 
@@ -31,7 +32,7 @@ export function renderCommandPanel() {
       drawGroup(panel, groupTitle, commands, activeAppKey);
     });
   } else {
-    drawEmptyState(panel, `No commands in ${app.name || activeAppKey} (${currentSubmode || 'Default'}). Click Edit to add commands.`);
+    drawEmptyState(panel, `${t('cmd_no_commands')} in ${app.name || activeAppKey} (${currentSubmode || 'Default'}).`);
   }
 }
 

@@ -4,6 +4,8 @@
 
 import { preprocessCropCanvas } from './ocrPreprocessor.js';
 import { repairIpv4, parsePortOlt, cleanOcrValueByDataType } from '../shared/networkConfigOcr.js';
+import { loadAndApplyViewConfig } from './theme.js';
+import { t } from '../shared/i18n.js';
 
 let screenshotImg = null;
 let canvasWidth = 0;
@@ -31,7 +33,8 @@ let varPopover, popoverSelectedTextInput, popoverSearch, varPopoverList;
 let bottomBar, btnReselectArea, chkRememberPos, btnCancelBottom, btnApplyValues;
 let ocrLoading;
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadAndApplyViewConfig();
   initDOMElements();
   initEventListeners();
 });
