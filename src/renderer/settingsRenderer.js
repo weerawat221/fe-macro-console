@@ -82,10 +82,14 @@ async function bootstrap() {
     commandSets = normalizeCommandSets(storedSets || DEFAULT_COMMAND_SETS);
     variables = normalizeVariables(storedVars || DEFAULT_VARIABLES);
 
-    // Sync normalized lists back to store so both windows stay in sync
+    // Sync normalized lists back to store only if uninitialized
     if (window.feMacro?.storeSet) {
-      window.feMacro.storeSet('variables', variables);
-      window.feMacro.storeSet('commandSets', commandSets);
+      if (storedVars === null) {
+        window.feMacro.storeSet('variables', variables);
+      }
+      if (storedSets === null) {
+        window.feMacro.storeSet('commandSets', commandSets);
+      }
     }
 
     // Load admin password setup status
@@ -121,9 +125,16 @@ if (document.readyState === 'loading') {
   bootstrap();
 }
 
-// Sync from other window updates
+// Sync from other window updates (safely without disrupting active modals or focused typing inputs)
 if (window.feMacro?.onStoreUpdated) {
   window.feMacro.onStoreUpdated(async ({ key, value }) => {
+    const isModalOpen = Boolean(document.querySelector('.modal-overlay:not(.modal-overlay--hidden)'));
+    const isUserTyping = document.activeElement && (
+      document.activeElement.tagName === 'INPUT' ||
+      document.activeElement.tagName === 'TEXTAREA' ||
+      document.activeElement.tagName === 'SELECT'
+    );
+
     if (key === 'commandSets') {
       commandSets = value || {};
       const appKeys = Object.keys(commandSets);
@@ -136,16 +147,24 @@ if (window.feMacro?.onStoreUpdated) {
           editorActiveSubmode = null;
         }
       }
-      renderAll();
+      if (!isModalOpen && !isUserTyping) {
+        renderAll();
+      }
     } else if (key === 'variables') {
       variables = value || [];
-      renderVariablesManager();
+      if (!isModalOpen && !isUserTyping) {
+        renderVariablesManager();
+      }
     } else if (key === 'viewConfig') {
       viewConfig = value || { ...DEFAULT_VIEW_CONFIG };
       applyViewConfig(viewConfig);
-      renderViewSettings();
+      if (!isModalOpen && !isUserTyping) {
+        renderViewSettings();
+      }
     } else if (key === 'customThemes') {
-      renderViewSettings();
+      if (!isModalOpen && !isUserTyping) {
+        renderViewSettings();
+      }
     }
   });
 }

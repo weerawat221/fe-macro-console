@@ -452,8 +452,12 @@ ipcMain.handle('macro:sendBlueConfigIp', async (_evt, ipString, appKey) => {
 
 function openSettingsWindow() {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
+    if (settingsWindow.isMinimized()) settingsWindow.restore();
     settingsWindow.show();
     settingsWindow.focus();
+    if (settingsWindow.webContents && !settingsWindow.webContents.isDestroyed()) {
+      settingsWindow.webContents.focus();
+    }
     return;
   }
 
@@ -481,6 +485,12 @@ function openSettingsWindow() {
   settingsWindow.setMenuBarVisibility(false);
   settingsWindow.loadFile(path.join(__dirname, '..', 'renderer', 'settings.html'));
 
+  settingsWindow.on('focus', () => {
+    if (settingsWindow && !settingsWindow.isDestroyed() && settingsWindow.webContents && !settingsWindow.webContents.isDestroyed()) {
+      settingsWindow.webContents.focus();
+    }
+  });
+
   if (isDev) {
     settingsWindow.webContents.openDevTools({ mode: 'detach' });
     settingsWindow.webContents.on('console-message', (_evt, level, message, line, sourceId) => {
@@ -494,30 +504,34 @@ function openSettingsWindow() {
   });
 }
 
-function broadcastStoreUpdate(key, value) {
+function broadcastStoreUpdate(key, value, senderWebContents = null) {
   const windows = BrowserWindow.getAllWindows();
   windows.forEach((win) => {
     if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
+      // Don't echo the store update back to the window that initiated the change
+      if (senderWebContents && win.webContents.id === senderWebContents.id) {
+        return;
+      }
       win.webContents.send('store:updated', { key, value });
     }
   });
 }
 
 ipcMain.handle('store:get', (_evt, key, fallback) => store.get(key, fallback));
-ipcMain.handle('store:set', (_evt, key, value) => {
+ipcMain.handle('store:set', (evt, key, value) => {
   store.set(key, value);
   if (key === 'commandSets') {
     updateCachedCommandSets();
   }
-  broadcastStoreUpdate(key, value);
+  broadcastStoreUpdate(key, value, evt.sender);
   return true;
 });
-ipcMain.handle('store:delete', (_evt, key) => {
+ipcMain.handle('store:delete', (evt, key) => {
   store.delete(key);
   if (key === 'commandSets') {
     updateCachedCommandSets();
   }
-  broadcastStoreUpdate(key, undefined);
+  broadcastStoreUpdate(key, undefined, evt.sender);
   return true;
 });
 
